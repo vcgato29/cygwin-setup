@@ -12,3 +12,5 @@ autoconf.h.in*
 inilex.cc
 iniparse.cc
 iniparse.hh
+cygwin.crt
+cygwin.key

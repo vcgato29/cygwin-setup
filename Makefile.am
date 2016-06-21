@@ -293,8 +293,8 @@ setup-src:
 	git ls-files | tar -T - -cJf ${CURDIR}/$$ver-src.tar.xz;\
 	echo $$ver-src.tar.xz; exec rm -f $$ver
 
-# optional: strip and compress executable
-.PHONY:	strip upx
+# optional: strip, compress and sign executable
+.PHONY:	strip upx sign
 
 strip:	all
 	$(OBJCOPY) --add-gnu-debuglink=/dev/null --only-keep-debug setup$(EXEEXT) setup.dbg
@@ -306,4 +306,13 @@ upx:	strip
 		upx --best --lzma setup$(EXEEXT) ;\
 	else \
 		echo "UPX doesn't seem to be installed, cannot compress setup$(EXEEXT)." ;\
+	fi
+
+sign:	upx
+	@if [ -e `which osslsigncode` ]; then \
+		osslsigncode sign -certs $(srcdir)/cygwin.crt -key $(srcdir)/cygwin.key -n "Cygwin setup" -i https://cygwin.com/ -in setup$(EXEEXT) -out setup-signed$(EXEEXT) ;\
+		chmod +x setup-signed.exe ;\
+		mv setup-signed.exe setup.exe ;\
+	else \
+		echo "osslsigncode not found, cannot sign setup$(EXEEXT)." ;\
 	fi
