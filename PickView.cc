@@ -500,7 +500,7 @@ PickView::init(views _mode)
 {
   HDC dc = GetDC (GetHWND());
   sysfont = GetStockObject (DEFAULT_GUI_FONT);
-  SelectObject (dc, sysfont);
+  HFONT stockfont = (HFONT)SelectObject (dc, sysfont);
   GetTextMetrics (dc, &tm);
 
   bitmap_dc = CreateCompatibleDC (dc);
@@ -561,6 +561,7 @@ PickView::init(views _mode)
                 wp.cx, wp.cy, wp.flags | SWP_SHOWWINDOW);
 
   header_height = wp.cy;
+  SelectObject (dc, stockfont);
   ReleaseDC (GetHWND (), dc);
 
   view_mode = _mode;
@@ -855,7 +856,7 @@ PickView::paint (HWND hwnd)
   PAINTSTRUCT ps;
   HDC hdc = BeginPaint (hwnd, &ps);
  
-  SelectObject (hdc, sysfont);
+  HFONT stockfont = (HFONT)SelectObject (hdc, sysfont);
   SetTextColor (hdc, GetSysColor (COLOR_WINDOWTEXT));
   SetBkColor (hdc, GetSysColor (COLOR_WINDOW));
   FillRgn (hdc, hUpdRgn, GetSysColorBrush(COLOR_WINDOW));
@@ -883,6 +884,7 @@ PickView::paint (HWND hwnd)
 
   DeleteObject (hUpdRgn);
   DeleteObject (bg_fg_brush);
+  SelectObject (hdc, stockfont);
   EndPaint (hwnd, &ps);
 }
 
@@ -953,7 +955,7 @@ PickView::refresh()
   // we must set the font of the DC here, otherwise the width calculations
   // will be off because the system will use the wrong font metrics
   sysfont = GetStockObject (DEFAULT_GUI_FONT);
-  SelectObject (dc, sysfont);
+  HFONT stockfont = (HFONT)SelectObject (dc, sysfont);
 
   // init headers for the current mode
   set_headers ();
@@ -967,6 +969,8 @@ PickView::refresh()
                     PickView::views::PackageFull : PickView::views::Category;
   set_headers ();
   init_headers (dc);
+
+  SelectObject (dc, stockfont);
   ReleaseDC (GetHWND (), dc);
 
   view_mode = cur_view_mode;
