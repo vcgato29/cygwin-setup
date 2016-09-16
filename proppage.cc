@@ -258,9 +258,7 @@ PropertyPage::DialogProc (UINT message, WPARAM wParam, LPARAM lParam)
             }
           default:
             {
-              // Pass unrecognized notifications to WM_COMMAND handler
-              return OnMessageCmd (pNmHdr->idFrom, pNmHdr->hwndFrom,
-                                   pNmHdr->code);
+              return OnNotify (pNmHdr);
             }
         }
         }

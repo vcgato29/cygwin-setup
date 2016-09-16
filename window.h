@@ -138,6 +138,13 @@ public:
     return false;
   };
 
+  virtual bool OnNotify (NMHDR *pNmHdr)
+  {
+    // Not processed by default.  Override in derived classes to
+    // do something with command messages if you need to.
+    return false;
+  };
+
   RECT GetWindowRect() const;
   RECT GetClientRect() const;
 

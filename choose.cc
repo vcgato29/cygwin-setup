@@ -139,13 +139,18 @@ void
 ChooserPage::createListview ()
 {
   SetBusy ();
-  static std::vector<packagemeta *> empty_cat;
-  static Category dummy_cat (std::string ("No packages found."), empty_cat);
+
+  listview = new ListView();
+  listview->init(GetHWND ());
+
   packagedb db;
   packagedb::categoriesType::iterator it = db.categories.find("All");
-
-  ListView *listview = new ListView();
-  listview->init(GetHWND ());
+  if (it == db.categories.end ())
+    listview->setemptytext("No packages found.");
+  if (source == IDC_SOURCE_DOWNLOAD)
+    listview->setemptytext("Nothing to download.");
+  else
+    listview->setemptytext("Nothing to install or update.");
 
   chooser = new PickView();
   chooser->init(PickView::views::Category, listview);
@@ -448,6 +453,22 @@ ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
     }
 
   // We don't care.
+  return false;
+}
+
+bool
+ChooserPage::OnNotify (NMHDR *pNmHdr)
+{
+#if DEBUG
+  Log (LOG_BABBLE) << "OnNotify " << pNmHdr->idFrom << " " << pNmHdr->hwndFrom << " " << pNmHdr->code << endLog;
+#endif
+
+  // route messages for the listview to it
+  if (pNmHdr->idFrom == IDC_CHOOSE_LIST)
+    // XXX: possibly should have PickView own the ListView and use an accessor here...
+    return listview->OnNotify(pNmHdr);
+
+  // we don't care
   return false;
 }
 

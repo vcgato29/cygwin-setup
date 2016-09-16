@@ -34,6 +34,7 @@ public:
   ~ChooserPage ();
 
   virtual bool OnMessageCmd (int id, HWND hwndctl, UINT code);
+  virtual bool OnNotify (NMHDR *pNmHdr);
   virtual INT_PTR CALLBACK OnTimerMessage (UINT message, WPARAM wParam,
 										   LPARAM lparam);
 

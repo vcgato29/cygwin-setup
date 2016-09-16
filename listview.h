@@ -36,7 +36,10 @@ class ListView
   int insert(const char *text);
   void insert_column(int row, int col, const char *text);
 
+  void setemptytext(const char *text);
+
   bool OnMessageCmd (int id, HWND hwndctl, UINT code);
+  bool OnNotify (NMHDR *pNmHdr);
 
   class Header
   {
@@ -49,6 +52,8 @@ class ListView
  private:
   HWND hWndParent;
   HWND hWndListView;
+
+  const char *empty_list_text;
 };
 
 #endif /* SETUP_LISTVIEW_H */

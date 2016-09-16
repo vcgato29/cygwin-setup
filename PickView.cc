@@ -415,9 +415,10 @@ PickView::init_headers (HDC dc)
 }
 
 
-PickView::PickView() : deftrust (TRUST_UNKNOWN),
+PickView::PickView() :
+  deftrust (TRUST_UNKNOWN),
   showObsolete (false),
-  packageFilterString (), hasWindowRect (false), total_delta_x (0)
+  packageFilterString ()
 {
 }
 
@@ -431,16 +432,6 @@ PickView::init(views _mode, ListView *_listview)
 
 PickView::~PickView()
 {
-  DeleteDC (bitmap_dc);
-  DeleteObject (bm_spin);
-  DeleteObject (bm_checkyes);
-  DeleteObject (bm_checkno);
-  DeleteObject (bm_checkna);
-  DeleteObject (bm_treeplus);
-  DeleteObject (bm_treeminus);
-  DeleteObject (rect_icon);
-  DeleteObject (bm_icon);
-  DeleteDC (icon_dc);
 }
 
 void

@@ -44,6 +44,11 @@ ListView::init(HWND parent)
   // locate the listview control
   hWndListView = ::GetDlgItem(parent, IDC_CHOOSE_LIST);
 
+  SendMessage(hWndListView, CCM_SETVERSION, 6, 0);
+
+  (void)ListView_SetExtendedListViewStyle(hWndListView,
+                                          LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
   // populate
   initColumns(pkg_headers);
 }
@@ -59,7 +64,7 @@ ListView::initColumns(HeaderList hl)
     {
       lvc.iSubItem = i;
       lvc.pszText = (char *)(hl[i].text);
-      //      lvc.cx = hl[i].width;
+      // lvc.cx = hl[i].width;
       lvc.cx = 100;
       lvc.fmt = hl[i].fmt;
 
@@ -98,9 +103,33 @@ ListView::OnMessageCmd (int id, HWND hwndctl, UINT code)
   return false;
 }
 
+bool
+ListView::OnNotify (NMHDR *pNmHdr)
+{
+  if (pNmHdr->code == LVN_GETEMPTYMARKUP)
+    {
+      NMLVEMPTYMARKUP *pnmMarkup = (NMLVEMPTYMARKUP*) pNmHdr;
+
+      MultiByteToWideChar(CP_UTF8, 0,
+                          empty_list_text, -1,
+                          pnmMarkup->szMarkup, L_MAX_URL_LENGTH);
+
+      return true;
+    }
+
+  // We don't care.
+  return false;
+}
+
 void
 ListView::empty(void)
 {
   if (ListView_DeleteAllItems(hWndListView) == -1)
     printf("ListView_DeleteAllItems failed");
+}
+
+void
+ListView::setemptytext(const char *text)
+{
+  empty_list_text = text;
 }
