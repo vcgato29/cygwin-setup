@@ -29,8 +29,13 @@ class ListView
   typedef Header *HeaderList;
 
   void init(HWND parent);
+
+  void empty();
   void initColumns(HeaderList hl);
+
   void addRow(int index, const char *text);
+
+  bool OnMessageCmd (int id, HWND hwndctl, UINT code);
 
   class Header
   {

@@ -84,3 +84,10 @@ ListView::addRow(int index, const char *text)
 
   //  ListView_SetItemText(hWndListView, index, subite, text);
 }
+
+bool
+ListView::OnMessageCmd (int id, HWND hwndctl, UINT code)
+{
+  // We don't care.
+  return false;
+}

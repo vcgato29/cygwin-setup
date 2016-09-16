@@ -59,7 +59,6 @@ static const char *cvsid =
 #include "Generic.h"
 #include "ControlAdjuster.h"
 #include "prereq.h"
-#include "listview.h"
 
 #include "UserSettings.h"
 
@@ -381,6 +380,10 @@ ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
 #if 1
   Log (LOG_BABBLE) << "OnMesageCmd " << id << " " << hwndctl << " " << code << endLog;
 #endif
+
+  // route messages for the listview to it
+  if (id == IDC_CHOOSE_LIST)
+    return listview->OnMessageCmd(id, hwndctl, code);
 
   if (code == EN_CHANGE && id == IDC_CHOOSE_SEARCH_EDIT)
     {

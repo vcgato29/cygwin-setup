@@ -272,7 +272,6 @@ PickView::setObsolete (bool doit)
   refresh ();
 }
 
-
 void
 PickView::insert_pkg (packagemeta & pkg)
 {
@@ -869,51 +868,6 @@ PickView::paint (HWND hwnd)
   DeleteObject (hUpdRgn);
   DeleteObject (bg_fg_brush);
   EndPaint (hwnd, &ps);
-}
-
-
-bool 
-PickView::Create (Window * parent, DWORD Style, RECT *r)
-{
-
-  // First register the window class, if we haven't already
-  if (!registerWindowClass ())
-    {
-      // Registration failed
-      return false;
-    }
-
-  // Save our parent, we'll probably need it eventually.
-  setParent(parent);
-
-  // Create the window instance
-  CreateWindowEx (// Extended Style
-                  WS_EX_CLIENTEDGE,
-                  // window class atom (name)
-                  "listview",   //MAKEINTATOM(WindowClassAtom),
-                  "listviewwindow", // no title-bar string yet
-                  // Style bits
-                  Style,
-                  r ? r->left : CW_USEDEFAULT,
-                  r ? r->top : CW_USEDEFAULT,
-                  r ? r->right - r->left + 1 : CW_USEDEFAULT,
-                  r ? r->bottom - r->top + 1 : CW_USEDEFAULT,
-                  // Parent Window
-                  parent == NULL ? (HWND)NULL : parent->GetHWND (),
-                  // use class menu
-                  (HMENU) MAKEINTRESOURCE (IDC_CHOOSE_LIST),
-                  // The application instance
-                  GetInstance (),
-                  // The this ptr, which we'll use to set up
-                  // the WindowProc reflection.
-                  reinterpret_cast<void *>((Window *)this));
-  if (GetHWND() == NULL)
-    {
-      Log (LOG_BABBLE) << "Failed to create PickView " << GetLastError () << endLog;
-      return false;
-    }
-
-  return true;
 }
 
 void

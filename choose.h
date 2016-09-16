@@ -60,7 +60,7 @@ private:
   void setPrompt(char const *aPrompt);
   void PlaceDialog (bool);
 
-  PickView *chooser;
+  ListView *listview;
   static HWND ins_dialog;
   bool cmd_show_set;
   bool saved_geom;
