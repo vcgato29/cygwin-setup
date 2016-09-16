@@ -33,7 +33,8 @@ class ListView
   void empty(void);
   void initColumns(HeaderList hl);
 
-  void insert(const char *text);
+  int insert(const char *text);
+  void insert_column(int row, int col, const char *text);
 
   bool OnMessageCmd (int id, HWND hwndctl, UINT code);
 
