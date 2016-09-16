@@ -116,7 +116,6 @@
 #define IDC_NET_USER                      527
 #define IDC_NET_PASSWD                    528
 #define IDC_VERSION                       529
-#define IDC_LISTVIEW_POS                  530
 #define IDC_CHOOSE_VIEW                   531
 #define IDC_CHOOSE_EXP                    532
 #define IDC_CHOOSE_CURR                   533
@@ -133,7 +132,6 @@
 #define IDC_DLS_IPROGRESS_TEXT            545
 #define IDC_CHOOSE_INST_TEXT              546
 #define IDC_CHOOSE_VIEWCAPTION            547
-#define IDC_CHOOSE_LISTHEADER             548
 #define IDC_INS_BL_PACKAGE                549
 #define IDC_INS_BL_TOTAL                  550
 #define IDC_INS_BL_DISK                   551

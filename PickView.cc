@@ -524,22 +524,7 @@ PickView::init(views _mode)
 
   HDLAYOUT hdl;
   WINDOWPOS wp;
-
-  // Ensure that the common control DLL is loaded, and then create
-  // the header control.
-  INITCOMMONCONTROLSEX controlinfo = { sizeof (INITCOMMONCONTROLSEX), 
-                                       ICC_LISTVIEW_CLASSES };
-  InitCommonControlsEx (&controlinfo);
-
-  if ((listheader = CreateWindowEx (0, WC_HEADER, (LPCTSTR) NULL,
-                                    WS_CHILD | WS_BORDER | CCS_NORESIZE |
-                                    // | HDS_BUTTONS
-                                    HDS_HORZ, 0, 0, 0, 0, GetHWND(),
-                                    (HMENU) IDC_CHOOSE_LISTHEADER, hinstance,
-                                    (LPVOID) NULL)) == NULL)
-    // FIXME: throw an exception
-    exit (10);
-
+  
   // Retrieve the bounding rectangle of the parent window's
   // client area, and then request size and position values
   // from the header control.

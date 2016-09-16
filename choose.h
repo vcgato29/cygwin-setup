@@ -20,6 +20,7 @@
 #include "proppage.h"
 #include "package_meta.h"
 #include "PickView.h"
+#include "listview.h"
 
 #define DEFAULT_TIMER_ID   5   //value doesn't matter, as long as it's unique
 #define SEARCH_TIMER_DELAY 500 //in milliseconds
@@ -51,7 +52,6 @@ public:
   }
 private:
   void createListview ();
-  RECT getDefaultListViewSize();
   void getParentRect (HWND parent, HWND child, RECT * r);
   void keepClicked();
   void changeTrust(trusts aTrust);

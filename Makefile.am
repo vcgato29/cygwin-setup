@@ -173,6 +173,8 @@ inilint_SOURCES = \
 	IOStreamProvider.h \
 	KeysSetting.cc \
 	KeysSetting.h \
+	listview.cc \
+	listview.h \
 	localdir.cc \
 	localdir.h \
 	LogFile.cc \
