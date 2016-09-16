@@ -30,10 +30,10 @@ class ListView
 
   void init(HWND parent);
 
-  void empty();
+  void empty(void);
   void initColumns(HeaderList hl);
 
-  void addRow(int index, const char *text);
+  void insert(const char *text);
 
   bool OnMessageCmd (int id, HWND hwndctl, UINT code);
 

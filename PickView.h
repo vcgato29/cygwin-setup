@@ -19,7 +19,7 @@
 #include <string>
 #include "win32.h"
 #include "window.h"
-#include "RECTWrapper.h"
+//#include "RECTWrapper.h"
 
 #define HMARGIN         10
 #define ROW_MARGIN      5
@@ -31,37 +31,26 @@
 #define CATEGORY_EXPANDED  0
 #define CATEGORY_COLLAPSED 1
 
-class PickView;
-#include "PickCategoryLine.h"
 #include "package_meta.h"
+#include "listview.h"
 
 class PickView : public Window
 {
 public:
-  virtual bool Create (Window * Parent = NULL, DWORD Style = WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN, RECT * r = NULL);
-  virtual bool registerWindowClass ();
   enum class views;
   class Header;
   int num_columns;
   void defaultTrust (trusts trust);
   void setViewMode (views mode);
   views getViewMode ();
-  void DrawIcon (HDC hdc, int x, int y, HANDLE hIcon);
-  void paint (HWND hwnd);
-  LRESULT CALLBACK list_click (HWND hwnd, BOOL dblclk, int x, int y, UINT hitCode);
-  LRESULT CALLBACK list_hscroll (HWND hwnd, HWND hctl, UINT code, int pos);
-  LRESULT CALLBACK list_vscroll (HWND hwnd, HWND hctl, UINT code, int pos);
-  void set_vscroll_info (const RECT &r);
-  virtual LRESULT WindowProc (UINT uMsg, WPARAM wParam, LPARAM lParam);
   Header *headers;
-  PickView (Category & cat);
-  void init(views _mode);
+  PickView ();
+  void init(views _mode, ListView *_listview);
   ~PickView();
   static const char *mode_caption (views mode);
   void setObsolete (bool doit);
   void insert_pkg (packagemeta &);
   void insert_category (Category *, bool);
-  int click (int row, int x);
   void refresh();
   int current_col;
   int new_col;
@@ -82,18 +71,11 @@ public:
   HANDLE sysfont;
   int scroll_ulc_x, scroll_ulc_y;
   int header_height;
-  PickCategoryLine contents;
   void scroll (HWND hwnd, int which, int *var, int code, int howmany);
 
   void SetPackageFilter (const std::string &filterString)
   {
     packageFilterString = filterString;
-  }
-  
-  
-  HWND ListHeader (void) const
-  {
-    return listheader;
   }
 
   enum class views
@@ -116,15 +98,14 @@ public:
   };
 
 private:
-  static ATOM WindowClassAtom;
-  HWND listheader;
   views view_mode;
+  ListView *listview;
   bool showObsolete;
   std::string packageFilterString;
 
   // Stuff needed to handle resizing
   bool hasWindowRect;
-  RECTWrapper lastWindowRect;
+  //  RECTWrapper lastWindowRect;
   int total_delta_x;
 
   int set_header_column_order (views vm);

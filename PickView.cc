@@ -16,10 +16,8 @@
 #include "PickView.h"
 #include <algorithm>
 #include <limits.h>
-#include <commctrl.h>
 #include <shlwapi.h>
-#include "PickPackageLine.h"
-#include "PickCategoryLine.h"
+
 #include "package_db.h"
 #include "package_version.h"
 #include "dialog.h"
@@ -51,32 +49,6 @@ static PickView::Header cat_headers[] = {
   {"Package", 0, 0, true},
   {0, 0, 0, false}
 };
-
-ATOM PickView::WindowClassAtom = 0;
-
-// DoInsertItem - inserts an item into a header control.
-// Returns the index of the new item.
-// hwndHeader - handle to the header control.
-// iInsertAfter - index of the previous item.
-// nWidth - width of the new item.
-// lpsz - address of the item string.
-static int
-DoInsertItem (HWND hwndHeader, int iInsertAfter, int nWidth, LPSTR lpsz)
-{
-  HDITEM hdi;
-  int index;
-
-  hdi.mask = HDI_TEXT | HDI_FORMAT | HDI_WIDTH;
-  hdi.pszText = lpsz;
-  hdi.cxy = nWidth;
-  hdi.cchTextMax = lstrlen (hdi.pszText);
-  hdi.fmt = HDF_LEFT | HDF_STRING;
-
-  index = SendMessage (hwndHeader, HDM_INSERTITEM,
-                       (WPARAM) iInsertAfter, (LPARAM) & hdi);
-
-  return index;
-}
 
 int
 PickView::set_header_column_order (views vm)
@@ -115,6 +87,7 @@ PickView::set_header_column_order (views vm)
 void
 PickView::set_headers ()
 {
+#if 0
   if (set_header_column_order (view_mode) == -1)
     return;
   while (int n = SendMessage (listheader, HDM_GETITEMCOUNT, 0, 0))
@@ -124,6 +97,7 @@ PickView::set_headers ()
   int i;
   for (i = 0; i <= last_col; i++)
     DoInsertItem (listheader, i, headers[i].width, (char *) headers[i].text);
+#endif
 }
 
 void
@@ -145,10 +119,10 @@ PickView::setViewMode (views mode)
   set_headers ();
   packagedb db;
 
-  contents.empty ();
+  listview->empty ();
   if (view_mode == PickView::views::Category)
     {
-      contents.ShowLabel (true);
+      // contents.ShowLabel (true);
       /* start collapsed. TODO: make this a chooser flag */
       for (packagedb::categoriesType::iterator n =
             packagedb::categories.begin(); n != packagedb::categories.end();
@@ -158,7 +132,7 @@ PickView::setViewMode (views mode)
     }
   else
     {
-      contents.ShowLabel (false);
+      // contents.ShowLabel (false);
       // iterate through every package
       for (packagedb::packagecollection::iterator i = db.packages.begin ();
             i != db.packages.end (); ++i)
@@ -195,24 +169,6 @@ PickView::setViewMode (views mode)
             }
         }
     }
-
-  RECT r = GetClientRect ();
-  SCROLLINFO si;
-  memset (&si, 0, sizeof (si));
-  si.cbSize = sizeof (si);
-  si.fMask = SIF_ALL | SIF_DISABLENOSCROLL;
-  si.nMin = 0;
-  si.nMax = headers[last_col].x + headers[last_col].width;    // + HMARGIN;
-  si.nPage = r.right;
-  SetScrollInfo (GetHWND(), SB_HORZ, &si, TRUE);
-
-  si.nMax = contents.itemcount () * row_height;
-  si.nPage = r.bottom - header_height;
-  SetScrollInfo (GetHWND(), SB_VERT, &si, TRUE);
-
-  scroll_ulc_x = scroll_ulc_y = 0;
-
-  InvalidateRect (GetHWND(), &r, TRUE);
 }
 
 PickView::views
@@ -278,8 +234,7 @@ PickView::insert_pkg (packagemeta & pkg)
   if (!showObsolete && isObsolete (pkg.categories))
     return;
 
-  PickLine & line = *new PickPackageLine (*this, pkg);
-  contents.insert (line);
+  listview->insert (pkg.name.c_str());
 }
 
 void
@@ -289,7 +244,7 @@ PickView::insert_category (Category *cat, bool collapsed)
   if (casecompare(cat->first, "All") == 0 ||
       (!showObsolete && isObsolete (cat->first)))
     return;
-  PickCategoryLine & catline = *new PickCategoryLine (*this, *cat, 1, collapsed);
+
   int packageCount = 0;
   for (vector <packagemeta *>::iterator i = cat->second.begin ();
        i != cat->second.end () ; ++i)
@@ -298,93 +253,12 @@ PickView::insert_category (Category *cat, bool collapsed)
           || (*i
 	      && StrStrI ((*i)->name.c_str (), packageFilterString.c_str ())))
 	{
-	  PickLine & line = *new PickPackageLine (*this, **i);
-	  catline.insert (line);
 	  packageCount++;
 	}
     }
-  
+
   if (packageFilterString.empty () || packageCount)
-    contents.insert (catline);
-  else
-    delete &catline;
-}
-
-int
-PickView::click (int row, int x)
-{
-  return contents.click (0, row, x);
-}
-
-
-void
-PickView::scroll (HWND hwnd, int which, int *var, int code, int howmany = 1)
-{
-  SCROLLINFO si;
-  si.cbSize = sizeof (si);
-  si.fMask = SIF_ALL | SIF_DISABLENOSCROLL;
-  GetScrollInfo (hwnd, which, &si);
-
-  switch (code)
-    {
-    case SB_THUMBTRACK:
-      si.nPos = si.nTrackPos;
-      break;
-    case SB_THUMBPOSITION:
-      break;
-    case SB_BOTTOM:
-      si.nPos = si.nMax;
-      break;
-    case SB_TOP:
-      si.nPos = 0;
-      break;
-    case SB_LINEDOWN:
-      si.nPos += (row_height * howmany);
-      break;
-    case SB_LINEUP:
-      si.nPos -= (row_height * howmany);
-      break;
-    case SB_PAGEDOWN:
-      si.nPos += si.nPage * 9 / 10;
-      break;
-    case SB_PAGEUP:
-      si.nPos -= si.nPage * 9 / 10;
-      break;
-    }
-
-  if ((int) si.nPos < 0)
-    si.nPos = 0;
-  if (si.nPos + si.nPage > (unsigned int) si.nMax)
-    si.nPos = si.nMax - si.nPage;
-
-  si.fMask = SIF_POS;
-  SetScrollInfo (hwnd, which, &si, TRUE);
-
-  int ox = scroll_ulc_x;
-  int oy = scroll_ulc_y;
-  *var = si.nPos;
-
-  RECT cr, sr;
-  ::GetClientRect (hwnd, &cr);
-  sr = cr;
-  sr.top += header_height;
-  UpdateWindow (hwnd);
-  ScrollWindow (hwnd, ox - scroll_ulc_x, oy - scroll_ulc_y, &sr, &sr);
-  /*
-     sr.bottom = sr.top;
-     sr.top = cr.top;
-     ScrollWindow (hwnd, ox - scroll_ulc_x, 0, &sr, &sr);
-   */
-  if (ox - scroll_ulc_x)
-    {
-      ::GetClientRect (listheader, &cr);
-      sr = cr;
-//  UpdateWindow (htmp);
-      ::MoveWindow (listheader, -scroll_ulc_x, 0,
-                  headers[last_col].x +
-                  headers[last_col].width, header_height, TRUE);
-    }
-  UpdateWindow (hwnd);
+    listview->insert (cat->first.c_str());
 }
 
 /* this means to make the 'category' column wide enough to fit the first 'n'
@@ -394,6 +268,7 @@ PickView::scroll (HWND hwnd, int which, int *var, int code, int howmany = 1)
 void
 PickView::init_headers (HDC dc)
 {
+#if 0  
   int i;
 
   for (i = 0; headers[i].text; i++)
@@ -485,69 +360,21 @@ PickView::init_headers (HDC dc)
   // and allow for resizing to ensure the last column reaches
   // all the way to the end of the chooser box.
   headers[last_col].width += total_delta_x;
+#endif
 }
 
 
-PickView::PickView (Category &cat) : deftrust (TRUST_UNKNOWN),
-contents (*this, cat, 0, false, true), showObsolete (false), 
-packageFilterString (), hasWindowRect (false), total_delta_x (0)
+PickView::PickView() : deftrust (TRUST_UNKNOWN),
+  showObsolete (false),
+  packageFilterString (), hasWindowRect (false), total_delta_x (0)
 {
 }
 
 void
-PickView::init(views _mode)
+PickView::init(views _mode, ListView *_listview)
 {
-  HDC dc = GetDC (GetHWND());
-  sysfont = GetStockObject (DEFAULT_GUI_FONT);
-  SelectObject (dc, sysfont);
-  GetTextMetrics (dc, &tm);
-
-  bitmap_dc = CreateCompatibleDC (dc);
-#define LI(x) LoadImage (hinstance, MAKEINTRESOURCE (x), IMAGE_BITMAP, 0, 0, 0);
-  bm_spin = LI (IDB_SPIN);
-  bm_checkyes = LI (IDB_CHECK_YES);
-  bm_checkno = LI (IDB_CHECK_NO);
-  bm_checkna = LI (IDB_CHECK_NA);
-  bm_treeplus = LI (IDB_TREE_PLUS);
-  bm_treeminus = LI (IDB_TREE_MINUS);  
-#undef LI  
-  icon_dc = CreateCompatibleDC (dc);
-  bm_icon = CreateCompatibleBitmap (dc, 11, 11);
-  SelectObject (icon_dc, bm_icon);
-  rect_icon = CreateRectRgn (0, 0, 11, 11);
-
-  row_height = (tm.tmHeight + tm.tmExternalLeading + ROW_MARGIN);
-  int irh = tm.tmExternalLeading + tm.tmDescent + 11 + ROW_MARGIN;
-  if (row_height < irh)
-    row_height = irh;
-
-  HDLAYOUT hdl;
-  WINDOWPOS wp;
-  
-  // Retrieve the bounding rectangle of the parent window's
-  // client area, and then request size and position values
-  // from the header control.
-  RECT rcParent = GetClientRect ();
-
-  hdl.prc = &rcParent;
-  hdl.pwpos = &wp;
-  if (!SendMessage (listheader, HDM_LAYOUT, 0, (LPARAM) & hdl))
-    // FIXME: throw an exception
-    exit (11);
-
-  // Set the font of the listheader, but don't redraw, because its not shown
-  // yet.This message does not return a value, so we are not checking it as we
-  // do above.
-  SendMessage (listheader, WM_SETFONT, (WPARAM) sysfont, FALSE);
-
-  // Set the size, position, and visibility of the header control.
-  SetWindowPos (listheader, wp.hwndInsertAfter, wp.x, wp.y,
-                wp.cx, wp.cy, wp.flags | SWP_SHOWWINDOW);
-
-  header_height = wp.cy;
-  ReleaseDC (GetHWND (), dc);
-
   view_mode = _mode;
+  listview = _listview;
   refresh ();
 }
 
@@ -563,311 +390,6 @@ PickView::~PickView()
   DeleteObject (rect_icon);
   DeleteObject (bm_icon);
   DeleteDC (icon_dc);
-}
-
-bool PickView::registerWindowClass ()
-{
-  if (WindowClassAtom != 0)
-    return true;
-
-  // We're not registered yet
-  WNDCLASSEX wc;
-
-  wc.cbSize = sizeof (wc);
-  // Some sensible style defaults
-  wc.style = CS_HREDRAW | CS_VREDRAW;
-  // Our default window procedure.  This replaces itself
-  // on the first call with the simpler Window::WindowProcReflector().
-  wc.lpfnWndProc = Window::FirstWindowProcReflector;
-  // No class bytes
-  wc.cbClsExtra = 0;
-  // One pointer to REFLECTION_INFO in the extra window instance bytes
-  wc.cbWndExtra = 4;
-  // The app instance
-  wc.hInstance = hinstance; //GetInstance ();
-  // Use a bunch of system defaults for the GUI elements
-  wc.hIcon = LoadIcon (0, IDI_APPLICATION);
-  wc.hIconSm = NULL;
-  wc.hCursor = LoadCursor (0, IDC_ARROW);
-  wc.hbrBackground = NULL;
-  // No menu
-  wc.lpszMenuName = NULL;
-  // We'll get a little crazy here with the class name
-  wc.lpszClassName = "listview";
-
-  // All set, try to register
-  WindowClassAtom = RegisterClassEx (&wc);
-  if (WindowClassAtom == 0)
-    Log (LOG_BABBLE) << "Failed to register listview " << GetLastError () << endLog;
-  return WindowClassAtom != 0;
-}
-
-LRESULT CALLBACK
-PickView::list_vscroll (HWND hwnd, HWND hctl, UINT code, int pos)
-{
-  scroll (hwnd, SB_VERT, &scroll_ulc_y, code);
-  return 0;
-}
-
-LRESULT CALLBACK
-PickView::list_hscroll (HWND hwnd, HWND hctl, UINT code, int pos)
-{
-  scroll (hwnd, SB_HORZ, &scroll_ulc_x, code);
-  return 0;
-}
-
-void
-PickView::set_vscroll_info (const RECT &r)
-{
-  SCROLLINFO si;
-  memset (&si, 0, sizeof (si));
-  si.cbSize = sizeof (si);
-  si.fMask = SIF_ALL | SIF_DISABLENOSCROLL;    /* SIF_RANGE was giving strange behaviour */
-  si.nMin = 0;
-
-  si.nMax = contents.itemcount () * row_height;
-  si.nPage = r.bottom - header_height;
-
-  /* if we are under the minimum display count ,
-   * set the offset to 0
-   */
-  if ((unsigned int) si.nMax <= si.nPage)
-    scroll_ulc_y = 0;
-  si.nPos = scroll_ulc_y;
-
-  SetScrollInfo (GetHWND(), SB_VERT, &si, TRUE);
-}
-
-LRESULT CALLBACK
-PickView::list_click (HWND hwnd, BOOL dblclk, int x, int y, UINT hitCode)
-{
-  int row, refresh __attribute__ ((unused));
-
-  if (contents.itemcount () == 0)
-    return 0;
-
-  if (y < header_height)
-    return 0;
-  x += scroll_ulc_x;
-  y += scroll_ulc_y - header_height;
-
-  row = (y + ROW_MARGIN / 2) / row_height;
-
-  if (row < 0 || row >= contents.itemcount ())
-    return 0;
-
-  refresh = click (row, x);
-
-  // XXX we need a method to query the database to see if more
-  // than just one package has changed! Until then...
-#if 0
-  if (refresh)
-    {
-#endif
-      RECT r = GetClientRect ();
-      set_vscroll_info (r);
-      InvalidateRect (GetHWND(), &r, TRUE);
-#if 0
-    }
-  else
-    {
-      RECT rect;
-      rect.left =
-        headers[new_col].x - scroll_ulc_x;
-      rect.right =
-        headers[src_col + 1].x - scroll_ulc_x;
-      rect.top =
-        header_height + row * row_height -
-        scroll_ulc_y;
-      rect.bottom = rect.top + row_height;
-      InvalidateRect (hwnd, &rect, TRUE);
-    }
-#endif
-  return 0;
-}
-
-/*
- * LRESULT CALLBACK
- * PickView::listview_proc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
- */
-LRESULT
-PickView::WindowProc (UINT message, WPARAM wParam, LPARAM lParam)
-{
-  int wheel_notches;
-  UINT wheel_lines;
-  
-  switch (message)
-    {
-    case WM_HSCROLL:
-      list_hscroll (GetHWND(), (HWND)lParam, LOWORD(wParam), HIWORD(wParam));
-      return 0;
-    case WM_VSCROLL:
-      list_vscroll (GetHWND(), (HWND)lParam, LOWORD(wParam), HIWORD(wParam));
-      return 0;
-    case WM_MOUSEWHEEL:
-      // this is how many 'notches' the wheel scrolled, forward/up = positive
-      wheel_notches = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
-      
-      // determine how many lines the user has configred for a mouse scroll
-      SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &wheel_lines, 0);
-
-      if (wheel_lines == 0)   // do no scrolling
-        return 0;
-      else if (wheel_lines == WHEEL_PAGESCROLL)
-        scroll (GetHWND (), SB_VERT, &scroll_ulc_y, (wheel_notches > 0) ?
-                SB_PAGEUP : SB_PAGEDOWN);
-      else
-        scroll (GetHWND (), SB_VERT, &scroll_ulc_y, (wheel_notches > 0) ?
-                SB_LINEUP : SB_LINEDOWN, wheel_lines * abs (wheel_notches));
-      return 0; // handled
-    case WM_LBUTTONDOWN:
-      list_click (GetHWND(), FALSE, LOWORD(lParam), HIWORD(lParam), wParam);
-      return 0;
-    case WM_PAINT:
-      paint (GetHWND());
-      return 0;
-    case WM_NOTIFY:
-      {
-        // pnmh = (LPNMHDR) lParam
-        LPNMHEADER phdr = (LPNMHEADER) lParam;
-        switch (phdr->hdr.code)
-          {
-          case HDN_ITEMCHANGED:
-            if (phdr->hdr.hwndFrom == ListHeader ())
-              {
-                if (phdr->pitem && phdr->pitem->mask & HDI_WIDTH)
-                  headers[phdr->iItem].width = phdr->pitem->cxy;
-  
-                for (int i = 1; i <= last_col; i++)
-                  headers[i].x = headers[i - 1].x + headers[i - 1].width;
-  
-                RECT r = GetClientRect ();
-                SCROLLINFO si;
-                si.cbSize = sizeof (si);
-                si.fMask = SIF_ALL | SIF_DISABLENOSCROLL;
-                GetScrollInfo (GetHWND(), SB_HORZ, &si);
-  
-                int oldMax = si.nMax;
-                si.nMax = headers[last_col].x + headers[last_col].width;
-                if (si.nTrackPos && oldMax > si.nMax)
-                  si.nTrackPos += si.nMax - oldMax;
-  
-                si.nPage = r.right;
-                SetScrollInfo (GetHWND(), SB_HORZ, &si, TRUE);
-                InvalidateRect (GetHWND(), &r, TRUE);
-                if (si.nTrackPos && oldMax > si.nMax)
-                  scroll (GetHWND(), SB_HORZ, &scroll_ulc_x, SB_THUMBTRACK);
-              }
-            break;
-          }
-        }
-      break;
-    case WM_SIZE:
-      {
-        // Note: WM_SIZE msgs only appear when 'just' scrolling the window
-        RECT windowRect = GetWindowRect ();
-        if (hasWindowRect)
-          {
-            int dx;
-            if ((dx = windowRect.right - windowRect.left -
-                        lastWindowRect.width ()) != 0)
-              {
-                cat_headers[set_header_column_order (views::Category)].width += dx;
-                pkg_headers[set_header_column_order (views::PackagePending)].width += dx;
-                set_header_column_order (view_mode);
-                set_headers ();
-                ::MoveWindow (listheader, -scroll_ulc_x, 0,
-                            headers[last_col].x +
-                            headers[last_col].width, header_height, TRUE);
-                total_delta_x += dx;
-              }
-	    if (windowRect.bottom - windowRect.top - lastWindowRect.height ())
-	      set_vscroll_info (GetClientRect ());
-          }
-        else
-          hasWindowRect = true;
-  
-        lastWindowRect = windowRect;
-        return 0;     
-      }
-    }
-  
-  // default: can't handle this message
-  return DefWindowProc (GetHWND(), message, wParam, lParam);
-}
-
-////
-// Turn black into foreground color and white into background color by
-//   1) Filling a square with ~(FG^BG)
-//   2) Blitting the bitmap on it with NOTSRCERASE (white->black; black->FG^BG)
-//   3) Blitting the result on BG with SRCINVERT (white->BG; black->FG)
-void
-PickView::DrawIcon (HDC hdc, int x, int y, HANDLE hIcon)
-{
-  SelectObject (bitmap_dc, hIcon);
-  FillRgn (icon_dc, rect_icon, bg_fg_brush);
-  BitBlt (icon_dc, 0, 0, 11, 11, bitmap_dc, 0, 0, NOTSRCERASE);
-  BitBlt (hdc, x, y, 11, 11, icon_dc, 0, 0, SRCINVERT);
-///////////// On WinNT-based systems, we could've done the below instead
-///////////// See http://support.microsoft.com/default.aspx?scid=kb;en-us;79212
-//      SelectObject (hdc, GetSysColorBrush (COLOR_WINDOWTEXT));
-//      HBITMAP bm_icon = CreateBitmap (11, 11, 1, 1, NULL);
-//      SelectObject (icon_dc, bm_icon);
-//      BitBlt (icon_dc, 0, 0, 11, 11, bitmap_dc, 0, 0, SRCCOPY);
-//      MaskBlt (hdc, x2, by, 11, 11, bitmap_dc, 0, 0, bm_icon, 0, 0, MAKEROP4 (SRCAND, PATCOPY));
-//      DeleteObject (bm_icon);
-}
-
-void
-PickView::paint (HWND hwnd)
-{
-  // we want to retrieve the update region before calling BeginPaint,
-  // because after we do that the update region is validated and we can
-  // no longer retrieve it
-  HRGN hUpdRgn = CreateRectRgn (0, 0, 0, 0);
-
-  if (GetUpdateRgn (hwnd, hUpdRgn, FALSE) == 0)
-    {
-      // error?
-      return;
-    }
-
-  // tell the system that we're going to begin painting our window
-  // it will prevent further WM_PAINT messages from arriving until we're
-  // done, and if any part of our window was invalidated while we are
-  // painting, it will retrigger us so that we can fix it
-  PAINTSTRUCT ps;
-  HDC hdc = BeginPaint (hwnd, &ps);
- 
-  SelectObject (hdc, sysfont);
-  SetTextColor (hdc, GetSysColor (COLOR_WINDOWTEXT));
-  SetBkColor (hdc, GetSysColor (COLOR_WINDOW));
-  FillRgn (hdc, hUpdRgn, GetSysColorBrush(COLOR_WINDOW));
-
-  COLORREF clr = ~GetSysColor (COLOR_WINDOW) ^ GetSysColor (COLOR_WINDOWTEXT);
-  clr = RGB (GetRValue (clr), GetGValue (clr), GetBValue (clr)); // reconvert
-  bg_fg_brush = CreateSolidBrush (clr);
-
-  RECT cr;
-  ::GetClientRect (hwnd, &cr);
-
-  int x = cr.left - scroll_ulc_x;
-  int y = cr.top - scroll_ulc_y + header_height;
-
-  contents.paint (hdc, hUpdRgn, x, y, 0, (view_mode == 
-                                  PickView::views::Category) ? 0 : 1);
-
-  if (contents.itemcount () == 0)
-    {
-      static const char *msg = "Nothing to Install/Update";
-      if (source == IDC_SOURCE_DOWNLOAD)
-        msg = "Nothing to Download";
-      TextOut (hdc, x + HMARGIN, y, msg, strlen (msg));
-    }
-
-  DeleteObject (hUpdRgn);
-  DeleteObject (bg_fg_brush);
-  EndPaint (hwnd, &ps);
 }
 
 void

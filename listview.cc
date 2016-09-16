@@ -48,8 +48,8 @@ ListView::init(HWND parent)
   // populate
   initColumns(pkg_headers);
 
-  addRow(0, "foo");
-  addRow(1, "bah");
+  insert("foo");
+  insert("bah");
 }
 
 void
@@ -72,11 +72,11 @@ ListView::initColumns(HeaderList hl)
 }
 
 void
-ListView::addRow(int index, const char *text)
+ListView::insert(const char *text)
 {
   LVITEM lvi;
   lvi.mask = LVIF_TEXT;
-  lvi.iItem = index;
+  lvi.iItem = ListView_GetItemCount(hWndListView) + 1;
   lvi.iSubItem = 0;
   lvi.pszText = (char *)text;
   if (ListView_InsertItem(hWndListView, &lvi) == -1)
@@ -90,4 +90,11 @@ ListView::OnMessageCmd (int id, HWND hwndctl, UINT code)
 {
   // We don't care.
   return false;
+}
+
+void
+ListView::empty(void)
+{
+  if (ListView_DeleteAllItems(hWndListView) == -1)
+    printf("ListView_DeleteAllItems failed");
 }

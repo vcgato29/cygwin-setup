@@ -147,7 +147,10 @@ ChooserPage::createListview ()
   ListView *listview = new ListView();
   listview->init(GetHWND ());
 
-  // SendMessage (GetDlgItem (IDC_CHOOSE_VIEW), CB_SETCURSEL, (WPARAM)chooser->getViewMode(), 0);
+  chooser = new PickView();
+  chooser->init(PickView::views::Category, listview);
+
+  SendMessage (GetDlgItem (IDC_CHOOSE_VIEW), CB_SETCURSEL, (WPARAM)chooser->getViewMode(), 0);
 
   /* FIXME: do we need to init the desired fields ? */
   static int ta[] = { IDC_CHOOSE_KEEP, IDC_CHOOSE_CURR, IDC_CHOOSE_EXP, 0 };
@@ -292,7 +295,7 @@ ChooserPage::OnInit ()
 void
 ChooserPage::OnActivate()
 {
-  // chooser->refresh();
+  chooser->refresh();
   PlaceDialog (true);
 }
 
@@ -352,14 +355,14 @@ ChooserPage::keepClicked()
       packagemeta & pkg = *(i->second);
       pkg.desired = pkg.installed;
     }
-  // chooser->refresh();
+  chooser->refresh();
 }
 
 void
 ChooserPage::changeTrust(trusts aTrust)
 {
   SetBusy ();
-  // chooser->defaultTrust (aTrust);
+  chooser->defaultTrust (aTrust);
   packagedb db;
   db.markUnVisited ();
 
@@ -368,7 +371,7 @@ ChooserPage::changeTrust(trusts aTrust)
       i->second->set_requirements(aTrust);
     }
 
-  // chooser->refresh();
+  chooser->refresh();
   PrereqChecker p;
   p.setTrust (aTrust);
   ClearBusy ();
@@ -377,12 +380,13 @@ ChooserPage::changeTrust(trusts aTrust)
 bool
 ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
 {
-#if 1
+#if DEBUG
   Log (LOG_BABBLE) << "OnMesageCmd " << id << " " << hwndctl << " " << code << endLog;
 #endif
 
   // route messages for the listview to it
   if (id == IDC_CHOOSE_LIST)
+    // XXX: possibly should have PickView own the ListView and use an accessor here...
     return listview->OnMessageCmd(id, hwndctl, code);
 
   if (code == EN_CHANGE && id == IDC_CHOOSE_SEARCH_EDIT)
@@ -398,8 +402,8 @@ ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
       {
         std::string value;
         eset (GetHWND (), IDC_CHOOSE_SEARCH_EDIT, value);
-        // chooser->SetPackageFilter (value);
-        // chooser->refresh ();
+        chooser->SetPackageFilter (value);
+        chooser->refresh ();
       }
       break;
 
@@ -419,7 +423,7 @@ ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
       break;
 
     case IDC_CHOOSE_HIDE:
-      // chooser->setObsolete (!IsButtonChecked (id));
+      chooser->setObsolete (!IsButtonChecked (id));
       break;
     default:
       // Wasn't recognized or handled.
@@ -437,7 +441,7 @@ ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
           LRESULT view_mode = SendMessage (GetDlgItem (IDC_CHOOSE_VIEW),
                                            CB_GETCURSEL, 0, 0);
           if (view_mode != CB_ERR)
-            // chooser->setViewMode ((PickView::views)view_mode);
+            chooser->setViewMode ((PickView::views)view_mode);
 
           return true;
         }
@@ -448,13 +452,6 @@ ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
 }
 
 INT_PTR CALLBACK
-ChooserPage::OnMouseWheel (UINT message, WPARAM wParam, LPARAM lParam)
-{
-  // return chooser->WindowProc (message, wParam, lParam);
-  return TRUE;
-}
-
-INT_PTR CALLBACK
 ChooserPage::OnTimerMessage (UINT message, WPARAM wParam, LPARAM lparam)
 {
   if (wParam == timer_id)
@@ -462,8 +459,8 @@ ChooserPage::OnTimerMessage (UINT message, WPARAM wParam, LPARAM lparam)
       std::string value (egetString (GetHWND (), IDC_CHOOSE_SEARCH_EDIT));
 
       KillTimer (GetHWND (), timer_id);
-      // chooser->SetPackageFilter (value);
-      // chooser->refresh ();
+      chooser->SetPackageFilter (value);
+      chooser->refresh ();
       return TRUE;
     }
 
