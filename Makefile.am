@@ -173,6 +173,8 @@ inilint_SOURCES = \
 	IOStreamProvider.h \
 	KeysSetting.cc \
 	KeysSetting.h \
+	listview.cc \
+	listview.h \
 	localdir.cc \
 	localdir.h \
 	LogFile.cc \
@@ -211,9 +213,6 @@ inilint_SOURCES = \
 	PackageSpecification.cc \
 	PackageSpecification.h \
 	PackageTrust.h \
-	PickCategoryLine.cc \
-	PickCategoryLine.h \
-	PickLine.h \
 	PickPackageLine.cc \
 	PickPackageLine.h \
 	PickView.cc \

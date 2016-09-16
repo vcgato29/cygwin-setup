@@ -16,30 +16,19 @@
 #ifndef SETUP_PICKPACKAGELINE_H
 #define SETUP_PICKPACKAGELINE_H
 
-class PickView;
 #include "package_meta.h"
-#include "PickLine.h"
+#include "PickView.h"
+#include "ListView.h"
 
-class PickPackageLine:public PickLine
+class PickPackageLine: public ListViewLine
 {
 public:
-  PickPackageLine (PickView &aView, packagemeta & apkg):PickLine (apkg.key), pkg (apkg), theView (aView)
+  PickPackageLine (PickView &aView, packagemeta & apkg) : pkg (apkg), theView (aView)
   {
   };
-  virtual void paint (HDC hdc, HRGN unused, int x, int y, int col_num, int show_cat);
-  virtual int click (int const myrow, int const ClickedRow, int const x);
-  virtual int itemcount () const
-  {
-    return 1;
-  }
-  virtual bool IsContainer (void) const
-  {
-    return false;
-  }
-  virtual void insert (PickLine &)
-  {
-  };
-  virtual int set_action (packagemeta::_actions);
+  const char *text(int col);
+  const char *tooltip(int col);
+  bool click(int col);
 private:
   packagemeta & pkg;
   PickView & theView;

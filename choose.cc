@@ -85,7 +85,6 @@ static ControlAdjuster::ControlInfo ChooserControlsInfo[] = {
   {IDC_CHOOSE_CURR, 		CP_RIGHT,   CP_TOP},
   {IDC_CHOOSE_EXP, 		CP_RIGHT,   CP_TOP},
   {IDC_CHOOSE_VIEW, 		CP_LEFT,    CP_TOP},
-  {IDC_LISTVIEW_POS, 		CP_RIGHT,   CP_TOP},
   {IDC_CHOOSE_VIEWCAPTION,	CP_LEFT,    CP_TOP},
   {IDC_CHOOSE_LIST,		CP_STRETCH, CP_STRETCH},
   {IDC_CHOOSE_HIDE,             CP_LEFT,    CP_BOTTOM},
@@ -140,20 +139,22 @@ void
 ChooserPage::createListview ()
 {
   SetBusy ();
-  static std::vector<packagemeta *> empty_cat;
-  static Category dummy_cat (std::string ("No packages found."), empty_cat);
+
+  listview = new ListView();
+  listview->init(GetHWND ());
+
   packagedb db;
   packagedb::categoriesType::iterator it = db.categories.find("All");
-  Category &cat = (it == db.categories.end ()) ? dummy_cat : *it;
-  chooser = new PickView (cat);
-  RECT r = getDefaultListViewSize();
-  if (!chooser->Create(this, WS_CHILD | WS_HSCROLL | WS_VSCROLL | WS_VISIBLE,&r))
-    // TODO throw exception
-    exit (11);
-  chooser->init(PickView::views::Category);
-  chooser->Show(SW_SHOW);
-  chooser->setViewMode (!is_new_install || UpgradeAlsoOption || hasManualSelections ?
-			PickView::views::PackagePending : PickView::views::Category);
+  if (it == db.categories.end ())
+    listview->setemptytext("No packages found.");
+  if (source == IDC_SOURCE_DOWNLOAD)
+    listview->setemptytext("Nothing to download.");
+  else
+    listview->setemptytext("Nothing to install or update.");
+
+  chooser = new PickView();
+  chooser->init(PickView::views::Category, listview);
+
   SendMessage (GetDlgItem (IDC_CHOOSE_VIEW), CB_SETCURSEL, (WPARAM)chooser->getViewMode(), 0);
 
   /* FIXME: do we need to init the desired fields ? */
@@ -223,16 +224,6 @@ void
 ChooserPage::setPrompt(char const *aString)
 {
   ::SetWindowText (GetDlgItem (IDC_CHOOSE_INST_TEXT), aString);
-}
-
-RECT
-ChooserPage::getDefaultListViewSize()
-{
-  RECT result;
-  getParentRect (GetHWND (), GetDlgItem (IDC_LISTVIEW_POS), &result);
-  result.top += 2;
-  result.bottom -= 2;
-  return result;
 }
 
 void
@@ -309,7 +300,7 @@ ChooserPage::OnInit ()
 void
 ChooserPage::OnActivate()
 {
-  chooser->refresh();;
+  chooser->refresh();
   PlaceDialog (true);
 }
 
@@ -395,8 +386,13 @@ bool
 ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
 {
 #if DEBUG
-  Log (LOG_BABBLE) << "OnMesageCmd " << id << " " << hwndctl << " " << code << endLog;
+  Log (LOG_BABBLE) << "ChooserPage::MessageCmd " << id << " " << hwndctl << " " << code << endLog;
 #endif
+
+  // route messages for the listview to it
+  if (id == IDC_CHOOSE_LIST)
+    // XXX: possibly should have PickView own the ListView and use an accessor here...
+    return listview->OnMessageCmd(id, hwndctl, code);
 
   if (code == EN_CHANGE && id == IDC_CHOOSE_SEARCH_EDIT)
     {
@@ -460,10 +456,20 @@ ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
   return false;
 }
 
-INT_PTR CALLBACK
-ChooserPage::OnMouseWheel (UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT
+ChooserPage::OnNotify (NMHDR *pNmHdr)
 {
-  return chooser->WindowProc (message, wParam, lParam);
+#if DEBUG
+  Log (LOG_BABBLE) << "ChooserPage::OnNotify " << pNmHdr->idFrom << " " << pNmHdr->hwndFrom << " " << pNmHdr->code << endLog;
+#endif
+
+  // route messages for the listview to it
+  if (pNmHdr->idFrom == IDC_CHOOSE_LIST)
+    // XXX: possibly should have PickView own the ListView and use an accessor here...
+    return listview->OnNotify(pNmHdr);
+
+  // we don't care
+  return false;
 }
 
 INT_PTR CALLBACK

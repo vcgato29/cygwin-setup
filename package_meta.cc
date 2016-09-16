@@ -247,12 +247,6 @@ packagemeta::getReadableCategoryList () const
               ).visitor.result;
 }
 
-static bool
-hasSDesc(packageversion const &pkg)
-{
-  return pkg.SDesc().size();
-}
-
 static void
 parseNames (std::set<string> &parsed, std::string &option)
 {
@@ -374,6 +368,12 @@ bool packagemeta::isManuallyDeleted() const
   return bReturn;
 }
 
+static bool
+hasSDesc(packageversion const &pkg)
+{
+  return pkg.SDesc().size();
+}
+
 const std::string
 packagemeta::SDesc () const
 {
@@ -381,6 +381,21 @@ packagemeta::SDesc () const
   if (i == versions.end())
     return std::string();
   return i->SDesc ();
+};
+
+static bool
+hasLDesc(packageversion const &pkg)
+{
+  return pkg.LDesc().size();
+}
+
+const std::string
+packagemeta::LDesc () const
+{
+  set<packageversion>::iterator i = find_if (versions.begin(), versions.end(), hasLDesc);
+  if (i == versions.end())
+    return std::string();
+  return i->LDesc ();
 };
 
 /* Return an appropriate caption given the current action. */
