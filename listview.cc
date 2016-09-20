@@ -82,7 +82,8 @@ ListView::resizeColumns(void)
   int i;
   for (i = 0; headers[i].text != 0; i++)
     {
-      if (ListView_SetColumnWidth(hWndListView, i, headers[i].width) == -1)
+      //      headers[i].width
+      if (ListView_SetColumnWidth(hWndListView, i, LVSCW_AUTOSIZE_USEHEADER) == -1)
         printf("ListView_SetColumnWidth failed");
     }
 }
@@ -94,7 +95,7 @@ ListView::set_contents(ListViewContents *_contents)
   contents = _contents;
 
   // disable redrawing of ListView
-  // (otherwise it will redraw every time a row is added, which is makes this very slow)
+  // (otherwise it will redraw every time a row is added, which makes this very slow)
   SendMessage(hWndListView, WM_SETREDRAW, FALSE, 0);
 
   size_t i;
@@ -146,14 +147,21 @@ ListView::OnNotify (NMHDR *pNmHdr)
     }
   else if (pNmHdr->code == NM_CLICK)
     {
-      NMITEMACTIVATE *pnmitem = (NMITEMACTIVATE *) pNmHdr;
-      Log (LOG_BABBLE) << "NM_CLICK: pnmitem->iItem " << pnmitem->iItem << endLog;
+      NMITEMACTIVATE *pNmItemAct = (NMITEMACTIVATE *) pNmHdr;
+      Log (LOG_BABBLE) << "NM_CLICK: pnmitem->iItem " << pNmItemAct->iItem << " pNmItemAct->iSubItem " << pNmItemAct->iSubItem << endLog;
 
-      int i;
-      i = ListView_GetNextItem(hWndListView, -1, LVNI_FOCUSED);
-      Log (LOG_BABBLE) << "NM_CLICK: focused item " << i << endLog;
+      if (pNmItemAct->iItem >= 0)
+        {
+          // Inform the item of the click
+          bool update = (*contents)[pNmItemAct->iItem]->click(pNmItemAct->iSubItem);
 
-      //ListView_SubItemHitTest(hWndListView, ...
+          // Update the item, if needed
+          if (update)
+            {
+              if (!ListView_RedrawItems(hWndListView, pNmItemAct->iItem, pNmItemAct->iItem))
+                Log (LOG_BABBLE) << "ListView_RedrawItems failed " << endLog;
+            }
+        }
     }
 
   // We don't care.

@@ -237,11 +237,34 @@ PickPackageLine::text(int col_num)
     {
       return pkg.SDesc().c_str();
     }
-  
+
   return "unknown";
 }
 
-void
-PickPackageLine::click(int col)
+bool
+PickPackageLine::click(int col_num)
 {
+  if (col_num == 2) // new (action)
+    {
+      pkg.set_action (theView.deftrust);
+    }
+  if (col_num == 3) // bintick
+    {
+      if (pkg.desired.accessible ())
+        pkg.desired.pick (!pkg.desired.picked (), &pkg);
+    }
+  else if (col_num == 4) // srctick
+    {
+      if (pkg.desired.sourcePackage ().accessible ())
+        pkg.desired.sourcePackage ().pick (!pkg.desired.sourcePackage ().picked (), NULL);
+    }
+  /* Unchecking binary while source is unchecked or vice versa is equivalent
+     to uninstalling.  It's essential to set desired correctly, otherwise the
+     package gets uninstalled without visual feedback to the user.  The package
+     will not even show up in the "Pending" view! */
+  if (!pkg.desired.picked () && !pkg.desired.sourcePackage ().picked ())
+    pkg.desired = packageversion ();
+
+  return true;
+
 }

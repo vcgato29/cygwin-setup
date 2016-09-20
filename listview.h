@@ -27,7 +27,7 @@ class ListViewLine
 {
  public:
   virtual const char *text(int col) = 0;
-  virtual void click(int col) = 0;
+  virtual bool click(int col) = 0;
 };
 
 typedef std::vector<ListViewLine *> ListViewContents;

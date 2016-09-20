@@ -27,7 +27,7 @@ public:
   {
   };
   const char *text(int col);
-  void click(int col);
+  bool click(int col);
 private:
   packagemeta & pkg;
   PickView & theView;
