@@ -93,12 +93,16 @@ ListView::set_contents(ListViewContents *_contents)
   empty();
   contents = _contents;
 
+  // disable redrawing of ListView
+  // (otherwise it will redraw every time a row is added, which is makes this very slow)
+  SendMessage(hWndListView, WM_SETREDRAW, FALSE, 0);
+
   size_t i;
   for (i = 0; i < contents->size();  i++)
     {
       LVITEM lvi;
       lvi.mask = LVIF_TEXT;
-      lvi.iItem = MAXINT; // assign next available index
+      lvi.iItem = i;
       lvi.iSubItem = 0;
       lvi.pszText = LPSTR_TEXTCALLBACK;
 
@@ -107,6 +111,10 @@ ListView::set_contents(ListViewContents *_contents)
       if (i == -1)
         printf("ListView_InsertItem failed");
     }
+
+  // enable redrawing of ListView and redraw
+  SendMessage(hWndListView, WM_SETREDRAW, TRUE, 0);
+  RedrawWindow(hWndListView, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
 bool
