@@ -56,20 +56,34 @@ ListView::init(HWND parent)
 void
 ListView::initColumns(HeaderList hl)
 {
+  // store HeaderList for later use
+  headers = hl;
+
   LVCOLUMN lvc;
-  lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+  lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_MINWIDTH | LVCF_TEXT | LVCF_SUBITEM;
 
   int i;
   for (i = 0; hl[i].text != 0; i++)
     {
       lvc.iSubItem = i;
       lvc.pszText = (char *)(hl[i].text);
-      // lvc.cx = hl[i].width;
       lvc.cx = 100;
+      lvc.cxMin = LVSCW_AUTOSIZE_USEHEADER;
       lvc.fmt = hl[i].fmt;
 
       if (ListView_InsertColumn(hWndListView, i, &lvc) == -1)
         printf("ListView_InsertColumn failed");
+    }
+}
+
+void
+ListView::resizeColumns(void)
+{
+  int i;
+  for (i = 0; headers[i].text != 0; i++)
+    {
+      if (ListView_SetColumnWidth(hWndListView, i, headers[i].width) == -1)
+        printf("ListView_SetColumnWidth failed");
     }
 }
 
@@ -115,6 +129,17 @@ ListView::OnNotify (NMHDR *pNmHdr)
                           pnmMarkup->szMarkup, L_MAX_URL_LENGTH);
 
       return true;
+    }
+  else if (pNmHdr->code == NM_CLICK)
+    {
+      NMITEMACTIVATE *pnmitem = (NMITEMACTIVATE *) pNmHdr;
+      Log (LOG_BABBLE) << "NM_CLICK: pnmitem->iItem " << pnmitem->iItem << endLog;
+
+      int i;
+      i = ListView_GetNextItem(hWndListView, -1, LVNI_FOCUSED);
+      Log (LOG_BABBLE) << "NM_CLICK: focused item " << i << endLog;
+
+      //ListView_SubItemHitTest(hWndListView, ...
     }
 
   // We don't care.

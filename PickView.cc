@@ -169,6 +169,8 @@ PickView::setViewMode (views mode)
             }
         }
     }
+
+  listview->resizeColumns();
 }
 
 PickView::views

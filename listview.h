@@ -32,6 +32,7 @@ class ListView
 
   void empty(void);
   void initColumns(HeaderList hl);
+  void resizeColumns(void);
 
   int insert(const char *text);
   void insert_column(int row, int col, const char *text);
@@ -53,6 +54,7 @@ class ListView
   HWND hWndParent;
   HWND hWndListView;
 
+  HeaderList headers;
   const char *empty_list_text;
 };
 
