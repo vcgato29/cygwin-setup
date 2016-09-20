@@ -102,6 +102,7 @@ private:
   ListView *listview;
   bool showObsolete;
   std::string packageFilterString;
+  ListViewContents *contents;
 
   // Stuff needed to handle resizing
   bool hasWindowRect;

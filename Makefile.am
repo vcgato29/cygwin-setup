@@ -213,6 +213,8 @@ inilint_SOURCES = \
 	PackageSpecification.cc \
 	PackageSpecification.h \
 	PackageTrust.h \
+	PickPackageLine.cc \
+	PickPackageLine.h \
 	PickView.cc \
 	PickView.h \
 	postinstall.cc \

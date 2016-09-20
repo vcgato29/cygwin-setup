@@ -14,6 +14,7 @@
  */
 
 #include "PickView.h"
+#include "PickPackageLine.h"
 #include <algorithm>
 #include <limits.h>
 #include <shlwapi.h>
@@ -119,7 +120,8 @@ PickView::setViewMode (views mode)
   set_headers ();
   packagedb db;
 
-  listview->empty ();
+  contents = new ListViewContents();
+
   if (view_mode == PickView::views::Category)
     {
       // contents.ShowLabel (true);
@@ -170,6 +172,7 @@ PickView::setViewMode (views mode)
         }
     }
 
+  listview->set_contents(contents);
   listview->resizeColumns();
 }
 
@@ -236,58 +239,7 @@ PickView::insert_pkg (packagemeta & pkg)
   if (!showObsolete && isObsolete (pkg.categories))
     return;
 
-  int row = listview->insert (pkg.name.c_str());
-
-  const char *bintick = "?";
-  if (/* uninstall or skip */ !pkg.desired ||
-      /* current version */ pkg.desired == pkg.installed ||
-      /* no source */ !pkg.desired.accessible())
-    bintick = "n/a";
-  else if (pkg.desired.picked())
-    bintick = "yes";
-  else
-    bintick = "no";
-
-  const char *srctick = "?";
-  if ( /* uninstall */ !pkg.desired ||
-       /* when no source mirror available */
-       !pkg.desired.sourcePackage().accessible())
-    srctick = "n/a";
-  else if (pkg.desired.sourcePackage().picked())
-    srctick = "yes";
-  else
-    srctick = "no";
-
-  int sz = 0;
-  packageversion picked;
-
-  /* Find the size of the package.  If user has chosen to upgrade/downgrade
-     the package, use that version.  Otherwise use the currently installed
-     version, or if not installed then use the version that would be chosen
-     based on the current trust level (curr/prev/test).  */
-  if (pkg.desired)
-    picked = pkg.desired;
-  else if (pkg.installed)
-    picked = pkg.installed;
-  else
-    picked = pkg.trustp (false, deftrust);
-
-  /* Include the size of the binary package, and if selected, the source
-     package as well.  */
-  sz += picked.source()->size;
-  if (picked.sourcePackage().picked())
-    sz += picked.sourcePackage().source()->size;
-
-  /* If size still 0, size must be unknown.  */
-  std::string size = (sz == 0) ? "?" : format_1000s((sz+1023)/1024) + "k";
-
-  listview->insert_column (row, 1, pkg.installed.Canonical_version ().c_str());
-  listview->insert_column (row, 2, pkg.action_caption ().c_str());
-  listview->insert_column (row, 3, bintick);
-  listview->insert_column (row, 4, srctick);
-  listview->insert_column (row, 5, pkg.getReadableCategoryList().c_str());
-  listview->insert_column (row, 6, size.c_str());
-  listview->insert_column (row, 7, pkg.SDesc().c_str());
+  contents->push_back(new PickPackageLine(*this, pkg));
 }
 
 void
@@ -311,7 +263,9 @@ PickView::insert_category (Category *cat, bool collapsed)
     }
 
   if (packageFilterString.empty () || packageCount)
-    listview->insert (cat->first.c_str());
+    {
+      // listview->insert (cat->first.c_str());
+    }
 }
 
 /* this means to make the 'category' column wide enough to fit the first 'n'

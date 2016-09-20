@@ -87,27 +87,26 @@ ListView::resizeColumns(void)
     }
 }
 
-int
-ListView::insert(const char *text)
-{
-  LVITEM lvi;
-  lvi.mask = LVIF_TEXT;
-  lvi.iItem = MAXINT; // assign next available index
-  lvi.iSubItem = 0;
-  lvi.pszText = (char *)text;
-
-  int i = ListView_InsertItem(hWndListView, &lvi);
-
-  if (i == -1)
-    printf("ListView_InsertItem failed");
-
-  return i;
-}
-
 void
-ListView::insert_column(int row, int col, const char *text)
+ListView::set_contents(ListViewContents *_contents)
 {
-  ListView_SetItemText(hWndListView, row, col, (char *)text);
+  empty();
+  contents = _contents;
+
+  size_t i;
+  for (i = 0; i < contents->size();  i++)
+    {
+      LVITEM lvi;
+      lvi.mask = LVIF_TEXT;
+      lvi.iItem = MAXINT; // assign next available index
+      lvi.iSubItem = 0;
+      lvi.pszText = LPSTR_TEXTCALLBACK;
+
+      int i = ListView_InsertItem(hWndListView, &lvi);
+
+      if (i == -1)
+        printf("ListView_InsertItem failed");
+    }
 }
 
 bool
@@ -120,7 +119,14 @@ ListView::OnMessageCmd (int id, HWND hwndctl, UINT code)
 bool
 ListView::OnNotify (NMHDR *pNmHdr)
 {
-  if (pNmHdr->code == LVN_GETEMPTYMARKUP)
+  if (pNmHdr->code == LVN_GETDISPINFO)
+    {
+      NMLVDISPINFO *pNmLvDispInfo = (NMLVDISPINFO *)pNmHdr;
+      // Log (LOG_BABBLE) << "LVN_GETDISPINFO " << pNmLvDispInfo->item.iItem << endLog;
+      pNmLvDispInfo->item.pszText = (char *) (*contents)[pNmLvDispInfo->item.iItem]->text(pNmLvDispInfo->item.iSubItem);
+      return true;
+    }
+  else if (pNmHdr->code == LVN_GETEMPTYMARKUP)
     {
       NMLVEMPTYMARKUP *pnmMarkup = (NMLVEMPTYMARKUP*) pNmHdr;
 

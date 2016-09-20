@@ -15,12 +15,22 @@
 #define SETUP_LISTVIEW_H
 
 #include "win32.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // interface to class ListView
 //
 // ListView Common Control
 // ---------------------------------------------------------------------------
+
+class ListViewLine
+{
+ public:
+  virtual const char *text(int col) = 0;
+  virtual void click(int col) = 0;
+};
+
+typedef std::vector<ListViewLine *> ListViewContents;
 
 class ListView
 {
@@ -34,8 +44,7 @@ class ListView
   void initColumns(HeaderList hl);
   void resizeColumns(void);
 
-  int insert(const char *text);
-  void insert_column(int row, int col, const char *text);
+  void set_contents(ListViewContents *contents);
 
   void setemptytext(const char *text);
 
@@ -54,6 +63,7 @@ class ListView
   HWND hWndParent;
   HWND hWndListView;
 
+  ListViewContents *contents;
   HeaderList headers;
   const char *empty_list_text;
 };
