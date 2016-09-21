@@ -60,7 +60,6 @@ public:
   HBRUSH bg_fg_brush;
   HANDLE bm_spin, bm_checkyes, bm_checkno, bm_checkna, bm_treeplus, bm_treeminus;
   trusts deftrust;
-  HANDLE sysfont;
   int scroll_ulc_x, scroll_ulc_y;
   int header_height;
   void scroll (HWND hwnd, int which, int *var, int code, int howmany);

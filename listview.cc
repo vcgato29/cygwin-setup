@@ -47,8 +47,10 @@ ListView::init(HWND parent)
   SendMessage(hWndListView, CCM_SETVERSION, 6, 0);
 
   (void)ListView_SetExtendedListViewStyle(hWndListView,
-                                          LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
-
+                                          LVS_EX_COLUMNSNAPPOINTS | // use cxMin
+                                          LVS_EX_FULLROWSELECT |
+                                          LVS_EX_GRIDLINES |
+                                          LVS_EX_HEADERDRAGDROP); // headers can be re-ordered
 
   // give the header control a border
   HWND hWndHeader = ListView_GetHeader(hWndListView);
@@ -103,15 +105,27 @@ ListView::initColumns(HeaderList headers_)
 void
 ListView::noteColumnWidth(int col_num, const std::string& string)
 {
-  ListView_SetItemText(hWndListView, 0, col_num, (char *)string.c_str());
+  HDC dc = GetDC (hWndListView);
+  SIZE s = { 0, 0 };
 
-  if (ListView_SetColumnWidth(hWndListView, col_num, LVSCW_AUTOSIZE_USEHEADER) == -1)
-    printf("ListView_SetColumnWidth failed");
+  // A margin of 3*GetSystemMetrics(SM_CXEDGE) is used at each side of the
+  // header text.
+  int addend = 2*3*GetSystemMetrics(SM_CXEDGE);
 
-  int width = ListView_GetColumnWidth(hWndListView, col_num);
+  // we must set the font of the DC here, otherwise the width calculations
+  // will be off because the system will use the wrong font metrics
+  HANDLE sysfont = GetStockObject (DEFAULT_GUI_FONT);
+  SelectObject (dc, sysfont);
+
+  if (string.size())
+    GetTextExtentPoint32 (dc, string.c_str(), string.size(), &s);
+
+  int width = addend + s.cx;
 
   if (width > headers[col_num].width)
     headers[col_num].width = width;
+
+  ReleaseDC(hWndListView, dc);
 }
 
 void
@@ -139,6 +153,7 @@ ListView::resizeColumns(void)
       lvc.iSubItem = i;
       lvc.cx = headers[i].width;
       lvc.cxMin = headers[i].hdr_width;
+      //      Log (LOG_BABBLE) << "resizeColumns: " << i << " cx " << lvc.cx << " cxMin " << lvc.cxMin <<endLog;
 
       if (ListView_SetColumn(hWndListView, i, &lvc) == -1)
         printf("ListView_SetColumn failed");
@@ -195,11 +210,14 @@ ListView::OnNotify (NMHDR *pNmHdr)
     }
   else if (pNmHdr->code == LVN_GETEMPTYMARKUP)
     {
-      NMLVEMPTYMARKUP *pnmMarkup = (NMLVEMPTYMARKUP*) pNmHdr;
+      NMLVEMPTYMARKUP *pNmMarkup = (NMLVEMPTYMARKUP*) pNmHdr;
 
       MultiByteToWideChar(CP_UTF8, 0,
                           empty_list_text, -1,
-                          pnmMarkup->szMarkup, L_MAX_URL_LENGTH);
+                          pNmMarkup->szMarkup, L_MAX_URL_LENGTH);
+
+      pNmMarkup->dwFlags = EMF_CENTERED;
+      wcscpy(pNmMarkup->szMarkup, L"Link one and two.");
 
       return true;
     }
