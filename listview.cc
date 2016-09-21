@@ -220,7 +220,7 @@ ListView::OnMessageCmd (int id, HWND hwndctl, UINT code)
   return false;
 }
 
-bool
+LRESULT
 ListView::OnNotify (NMHDR *pNmHdr)
 {
 #if DEBUG
@@ -316,6 +316,47 @@ ListView::OnNotify (NMHDR *pNmHdr)
       return true;
     }
     break;
+
+  case NM_CUSTOMDRAW:
+    {
+      NMLVCUSTOMDRAW *pNmLvCustomDraw = (NMLVCUSTOMDRAW *)pNmHdr;
+
+      switch(pNmLvCustomDraw->nmcd.dwDrawStage)
+        {
+        case CDDS_PREPAINT:
+          return CDRF_NOTIFYITEMDRAW;
+        case CDDS_ITEMPREPAINT:
+          {
+            COLORREF crText, crBkgnd;
+            int iRow = pNmLvCustomDraw->nmcd.dwItemSpec;
+            Log (LOG_BABBLE) << "NM_CUSTOMDRAW: stage " << pNmLvCustomDraw->nmcd.dwDrawStage << " row:" << iRow << endLog;
+
+            if ((iRow % 2) == 0)
+              {
+                crText = RGB(255,0,0);
+                crBkgnd = RGB(128,128,255);
+              }
+            else
+              {
+                crText = RGB(0,255,0);
+                crBkgnd = RGB(255,0,0);
+            }
+
+            pNmLvCustomDraw->clrText = crText;
+            pNmLvCustomDraw->clrTextBk = crBkgnd;
+
+            return CDRF_NEWFONT;
+          }
+          //          return CDRF_NOTIFYSUBITEMDRAW;
+        case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
+          {
+            // int iCol = pNmLvCustomDraw->iSubItem;
+            int iRow = pNmLvCustomDraw->nmcd.dwItemSpec;
+            pNmLvCustomDraw->clrTextBk = RGB(10+iRow*10, 10+iRow*10, 10+iRow*10);
+            return CDRF_NEWFONT;
+          }
+        }
+    }
   }
 
   // We don't care.
@@ -338,6 +379,7 @@ ListView::setemptytext(const char *text)
 LRESULT
 ListView::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+#if 0
   switch (uMsg)
     {
     case WM_LBUTTONDOWN:
@@ -363,28 +405,32 @@ ListView::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         SendMessage(ttHwnd, TTM_RELAYEVENT, GetMessageExtraInfo(), (LPARAM) &msg);
       }
     }
+#endif
 
   // XXX: these should live in base class
   switch (uMsg)
     {
     case WM_NOTIFY:
       {
-        if (OnNotify ((NMHDR *) lParam))
-          return true;
+        LRESULT result = OnNotify ((NMHDR *) lParam);
+        if (result)
+          return result;
       }
       break;
     case WM_COMMAND:
       {
-        if (OnMessageCmd (LOWORD (wParam), (HWND) lParam, HIWORD (wParam)))
-          return true;
+        LRESULT result = OnMessageCmd (LOWORD (wParam), (HWND) lParam, HIWORD (wParam));
+        if (result)
+          return result;
       }
       break;
     }
 
   if ((uMsg >= WM_APP) && (uMsg < 0xC000))
     {
-      if (OnMessageApp (uMsg, wParam, lParam))
-        return true;
+      LRESULT result = OnMessageApp (uMsg, wParam, lParam);
+      if (result)
+        return result;
     }
 
   // if unhandled, call base class method

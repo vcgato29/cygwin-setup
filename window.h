@@ -143,7 +143,7 @@ public:
     return false;
   };
 
-  virtual bool OnNotify (NMHDR *pNmHdr)
+  virtual LRESULT OnNotify (NMHDR *pNmHdr)
   {
     // Not processed by default.  Override in derived classes to
     // do something with command messages if you need to.

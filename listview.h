@@ -52,7 +52,7 @@ class ListView : Window
   void setemptytext(const char *text);
 
   bool OnMessageCmd (int id, HWND hwndctl, UINT code);
-  bool OnNotify (NMHDR *pNmHdr);
+  LRESULT OnNotify (NMHDR *pNmHdr);
 
   class Header
   {

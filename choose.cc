@@ -456,7 +456,7 @@ ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
   return false;
 }
 
-bool
+LRESULT
 ChooserPage::OnNotify (NMHDR *pNmHdr)
 {
 #if DEBUG
