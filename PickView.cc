@@ -27,8 +27,19 @@
 #include "state.h"
 #include "LogSingleton.h"
 
-using namespace std;
+enum
+  {
+    pkgname_col = 0,
+    current_col = 1,
+    new_col = 2,
+    bintick_col = 3,
+    srctick_col = 4,
+    cat_col = 5,
+    size_col = 6,
+    pkg_col = 7,  // actually desc
+  };
 
+#if 0
 static PickView::Header pkg_headers[] = {
   {"Current", 0, 0, true},
   {"New", 0, 0, true},
@@ -50,7 +61,9 @@ static PickView::Header cat_headers[] = {
   {"Package", 0, 0, true},
   {0, 0, 0, false}
 };
+#endif
 
+#if 0
 int
 PickView::set_header_column_order (views vm)
 {
@@ -84,6 +97,7 @@ PickView::set_header_column_order (views vm)
     return -1;
   return last_col;
 }
+#endif
 
 void
 PickView::set_headers ()
@@ -102,22 +116,10 @@ PickView::set_headers ()
 }
 
 void
-PickView::note_width (PickView::Header *hdrs, HDC dc,
-                      const std::string& string, int addend, int column)
-{
-  SIZE s = { 0, 0 };
-
-  if (string.size())
-    GetTextExtentPoint32 (dc, string.c_str(), string.size(), &s);
-  if (hdrs[column].width < s.cx + addend)
-    hdrs[column].width = s.cx + addend;
-}
-
-void
 PickView::setViewMode (views mode)
 {
   view_mode = mode;
-  set_headers ();
+  //set_headers ();
   packagedb db;
 
   contents = new ListViewContents();
@@ -206,9 +208,9 @@ PickView::mode_caption (views mode)
 
 /* meant to be called on packagemeta::categories */
 bool
-isObsolete (set <std::string, casecompare_lt_op> &categories)
+isObsolete (std::set <std::string, casecompare_lt_op> &categories)
 {
-  set <std::string, casecompare_lt_op>::const_iterator i;
+  std::set <std::string, casecompare_lt_op>::const_iterator i;
   
   for (i = categories.begin (); i != categories.end (); ++i)
     if (isObsolete (*i))
@@ -251,7 +253,7 @@ PickView::insert_category (Category *cat, bool collapsed)
     return;
 
   int packageCount = 0;
-  for (vector <packagemeta *>::iterator i = cat->second.begin ();
+  for (std::vector <packagemeta *>::iterator i = cat->second.begin ();
        i != cat->second.end () ; ++i)
     {
       if (packageFilterString.empty () \
@@ -273,34 +275,21 @@ PickView::insert_category (Category *cat, bool collapsed)
 #define NUM_CATEGORY_COL_WIDTH 2
 
 void
-PickView::init_headers (HDC dc)
+PickView::init_headers (void)
 {
-#if 0  
-  int i;
+  // widths of the 'bin' and 'src' checkbox columns just need to accommodate the
+  // column name
+  listview->noteColumnWidth (bintick_col, "");
+  listview->noteColumnWidth (srctick_col, "");
 
-  for (i = 0; headers[i].text; i++)
-    {
-      headers[i].width = 0;
-      headers[i].x = 0;
-    }
-
-  // A margin of 3*GetSystemMetrics(SM_CXEDGE) is used at each side of the
-  // header text.  (Probably should use that rather than hard-coding HMARGIN
-  // everywhere)
-  int addend = 2*3*GetSystemMetrics(SM_CXEDGE);
-
-  // accommodate widths of the 'bin' and 'src' checkbox columns
-  note_width (headers, dc, headers[bintick_col].text, addend, bintick_col);
-  note_width (headers, dc, headers[srctick_col].text, addend, srctick_col);
-
-  // accomodate the width of each category name
+  // (In category view) accommodate the width of each category name
   packagedb db;
   for (packagedb::categoriesType::iterator n = packagedb::categories.begin();
        n != packagedb::categories.end(); ++n)
     {
       if (!showObsolete && isObsolete (n->first))
         continue;
-      note_width (headers, dc, n->first, HMARGIN, cat_col);
+      listview->noteColumnWidth (cat_col, n->first);
     }
 
   /* For each package, accomodate the width of the installed version in the
@@ -315,31 +304,30 @@ PickView::init_headers (HDC dc)
       if (!showObsolete && isObsolete (pkg.categories))
         continue;
       if (pkg.installed)
-        note_width (headers, dc, pkg.installed.Canonical_version (),
-                    HMARGIN, current_col);
-      for (set<packageversion>::iterator i = pkg.versions.begin ();
-	   i != pkg.versions.end (); ++i)
-	{
+        listview->noteColumnWidth (current_col, pkg.installed.Canonical_version ());
+      for (std::set<packageversion>::iterator i = pkg.versions.begin ();
+           i != pkg.versions.end (); ++i)
+        {
           if (*i != pkg.installed)
-            note_width (headers, dc, i->Canonical_version (),
-                        HMARGIN + SPIN_WIDTH, new_col);
-	  std::string z = format_1000s(packageversion(*i).source ()->size);
-	  note_width (headers, dc, z, HMARGIN, size_col);
-	  z = format_1000s(packageversion(i->sourcePackage ()).source ()->size);
-	  note_width (headers, dc, z, HMARGIN, size_col);
-	}
+            listview->noteColumnWidth (new_col, i->Canonical_version ());
+          std::string z = format_1000s(packageversion(*i).source ()->size);
+          listview->noteColumnWidth (size_col, z);
+          z = format_1000s(packageversion(i->sourcePackage ()).source ()->size);
+          listview->noteColumnWidth (size_col, z);
+        }
       std::string s = pkg.name;
-      if (pkg.SDesc ().size())
-	s += std::string (": ") + std::string(pkg.SDesc ());
-      note_width (headers, dc, s, HMARGIN, pkg_col);
-      
+      listview->noteColumnWidth (pkgname_col, s);
+
+      s = pkg.SDesc ();
+      listview->noteColumnWidth (pkg_col, s);
+
       if (view_mode != PickView::views::Category && pkg.categories.size () > 2)
         {
-          std::string compound_cat("");          
+          std::string compound_cat("");
           std::set<std::string, casecompare_lt_op>::const_iterator cat;
           size_t cnt;
-          
-          for (cnt = 0, cat = pkg.categories.begin (); 
+
+          for (cnt = 0, cat = pkg.categories.begin ();
                cnt < NUM_CATEGORY_COL_WIDTH && cat != pkg.categories.end ();
                ++cat)
             {
@@ -350,26 +338,16 @@ PickView::init_headers (HDC dc)
               compound_cat += *cat;
               cnt++;
             }
-          note_width (headers, dc, compound_cat, HMARGIN, cat_col);
+          listview->noteColumnWidth (cat_col, compound_cat);
         }
     }
-  
+
   // ensure that the new_col is wide enough for all the labels
-  const char *captions[] = { "Uninstall", "Skip", "Reinstall", "Retrieve", 
+  const char *captions[] = { "Uninstall", "Skip", "Reinstall", "Retrieve",
                              "Source", "Keep", NULL };
   for (int i = 0; captions[i]; i++)
-    note_width (headers, dc, captions[i], HMARGIN + SPIN_WIDTH, new_col);
-
-  // finally, compute the actual x values based on widths
-  headers[0].x = 0;
-  for (i = 1; i <= last_col; i++)
-    headers[i].x = headers[i - 1].x + headers[i - 1].width;
-  // and allow for resizing to ensure the last column reaches
-  // all the way to the end of the chooser box.
-  headers[last_col].width += total_delta_x;
-#endif
+    listview->noteColumnWidth (cat_col, captions[i]);
 }
-
 
 PickView::PickView() :
   deftrust (TRUST_UNKNOWN),
@@ -407,26 +385,18 @@ PickView::defaultTrust (trusts trust)
 void
 PickView::refresh()
 {
-  HDC dc = GetDC (GetHWND ());
-  
-  // we must set the font of the DC here, otherwise the width calculations
-  // will be off because the system will use the wrong font metrics
-  sysfont = GetStockObject (DEFAULT_GUI_FONT);
-  SelectObject (dc, sysfont);
-
   // init headers for the current mode
-  set_headers ();
-  init_headers (dc);
-  
+  // set_headers ();
+  init_headers ();
+
   // save the current mode
   views cur_view_mode = view_mode;
-  
+
   // switch to the other type and do those headers
-  view_mode = (view_mode == PickView::views::Category) ? 
+  view_mode = (view_mode == PickView::views::Category) ?
                     PickView::views::PackageFull : PickView::views::Category;
   set_headers ();
-  init_headers (dc);
-  ReleaseDC (GetHWND (), dc);
+  init_headers ();
 
   view_mode = cur_view_mode;
   setViewMode (view_mode);

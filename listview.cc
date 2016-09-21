@@ -25,14 +25,14 @@
 // ---------------------------------------------------------------------------
 
 static ListView::Header pkg_headers[] = {
-  {"Package",     LVSCW_AUTOSIZE,           LVCFMT_LEFT},
-  {"Current",     LVSCW_AUTOSIZE,           LVCFMT_LEFT},
-  {"New",         LVSCW_AUTOSIZE,           LVCFMT_LEFT},
-  {"Bin?",        LVSCW_AUTOSIZE_USEHEADER, LVCFMT_LEFT},
-  {"Src?",        LVSCW_AUTOSIZE_USEHEADER, LVCFMT_LEFT},
-  {"Categories",  LVSCW_AUTOSIZE,           LVCFMT_LEFT},
-  {"Size",        LVSCW_AUTOSIZE,           LVCFMT_RIGHT},
-  {"Description", LVSCW_AUTOSIZE,           LVCFMT_LEFT},
+  {"Package",     LVCFMT_LEFT,  0},
+  {"Current",     LVCFMT_LEFT,  0},
+  {"New",         LVCFMT_LEFT,  0},
+  {"Bin?",        LVCFMT_LEFT,  0},
+  {"Src?",        LVCFMT_LEFT,  0},
+  {"Categories",  LVCFMT_LEFT,  0},
+  {"Size",        LVCFMT_RIGHT, 0},
+  {"Description", LVCFMT_LEFT,  0},
   {0, 0, 0}
 };
 
@@ -49,42 +49,99 @@ ListView::init(HWND parent)
   (void)ListView_SetExtendedListViewStyle(hWndListView,
                                           LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
+
+  // give the header control a border
+  HWND hWndHeader = ListView_GetHeader(hWndListView);
+  SetWindowLongPtr(hWndHeader, GWL_STYLE,
+                   GetWindowLongPtr(hWndHeader, GWL_STYLE) | WS_BORDER);
+
+  // ensure an initial item exists for width calculations...
+  LVITEM lvi;
+  lvi.mask = LVIF_TEXT;
+  lvi.iItem = 0;
+  lvi.iSubItem = 0;
+  lvi.pszText = (char *)"Working...";
+  (void)ListView_InsertItem(hWndListView, &lvi);
+
   // populate
   initColumns(pkg_headers);
 }
 
 void
-ListView::initColumns(HeaderList hl)
+ListView::initColumns(HeaderList headers_)
 {
   // store HeaderList for later use
-  headers = hl;
+  headers = headers_;
 
+  // create the columns
   LVCOLUMN lvc;
-  lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_MINWIDTH | LVCF_TEXT | LVCF_SUBITEM;
+  lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
 
   int i;
-  for (i = 0; hl[i].text != 0; i++)
+  for (i = 0; headers[i].text != 0; i++)
     {
       lvc.iSubItem = i;
-      lvc.pszText = (char *)(hl[i].text);
+      lvc.pszText = (char *)(headers[i].text);
       lvc.cx = 100;
-      lvc.cxMin = LVSCW_AUTOSIZE_USEHEADER;
-      lvc.fmt = hl[i].fmt;
+      lvc.fmt = headers[i].fmt;
 
       if (ListView_InsertColumn(hWndListView, i, &lvc) == -1)
         printf("ListView_InsertColumn failed");
     }
+
+  // now do some width calculations
+  for (i = 0; headers[i].text != 0; i++)
+    {
+      headers[i].width = 0;
+
+      if (ListView_SetColumnWidth(hWndListView, i, LVSCW_AUTOSIZE_USEHEADER) == -1)
+        printf("ListView_SetColumnWidth failed");
+      headers[i].hdr_width = ListView_GetColumnWidth(hWndListView, i);
+    }
+}
+
+void
+ListView::noteColumnWidth(int col_num, const std::string& string)
+{
+  ListView_SetItemText(hWndListView, 0, col_num, (char *)string.c_str());
+
+  if (ListView_SetColumnWidth(hWndListView, col_num, LVSCW_AUTOSIZE_USEHEADER) == -1)
+    printf("ListView_SetColumnWidth failed");
+
+  int width = ListView_GetColumnWidth(hWndListView, col_num);
+
+  if (width > headers[col_num].width)
+    headers[col_num].width = width;
 }
 
 void
 ListView::resizeColumns(void)
 {
+  // ensure the last column stretches all the way to the right-hand side of the
+  // listview control
   int i;
+  int total = 0;
+  for (i = 0; headers[i].text != 0; i++)
+    total = total + headers[i].width;
+
+  RECT r;
+  GetClientRect(hWndListView, &r);
+  int width = r.right - r.left;
+
+  if (total < width)
+    headers[i-1].width += width - total;
+
+  // size each column
+  LVCOLUMN lvc;
+  lvc.mask = LVCF_WIDTH | LVCF_MINWIDTH;
   for (i = 0; headers[i].text != 0; i++)
     {
-      //      headers[i].width
-      if (ListView_SetColumnWidth(hWndListView, i, LVSCW_AUTOSIZE_USEHEADER) == -1)
-        printf("ListView_SetColumnWidth failed");
+      lvc.iSubItem = i;
+      lvc.cx = headers[i].width;
+      lvc.cxMin = headers[i].hdr_width;
+
+      if (ListView_SetColumn(hWndListView, i, &lvc) == -1)
+        printf("ListView_SetColumn failed");
     }
 }
 
@@ -132,7 +189,8 @@ ListView::OnNotify (NMHDR *pNmHdr)
     {
       NMLVDISPINFO *pNmLvDispInfo = (NMLVDISPINFO *)pNmHdr;
       // Log (LOG_BABBLE) << "LVN_GETDISPINFO " << pNmLvDispInfo->item.iItem << endLog;
-      pNmLvDispInfo->item.pszText = (char *) (*contents)[pNmLvDispInfo->item.iItem]->text(pNmLvDispInfo->item.iSubItem);
+      if (contents)
+        pNmLvDispInfo->item.pszText = (char *) (*contents)[pNmLvDispInfo->item.iItem]->text(pNmLvDispInfo->item.iSubItem);
       return true;
     }
   else if (pNmHdr->code == LVN_GETEMPTYMARKUP)

@@ -52,14 +52,6 @@ public:
   void insert_pkg (packagemeta &);
   void insert_category (Category *, bool);
   void refresh();
-  int current_col;
-  int new_col;
-  int bintick_col;
-  int srctick_col;
-  int cat_col;
-  int size_col;
-  int pkg_col;
-  int last_col;
   int row_height;
   TEXTMETRIC tm;
   HDC bitmap_dc, icon_dc;
@@ -111,9 +103,7 @@ private:
 
   int set_header_column_order (views vm);
   void set_headers ();
-  void init_headers (HDC dc);
-  void note_width (Header *hdrs, HDC dc, const std::string& string,
-                   int addend, int column);
+  void init_headers ();
 };
 
 bool isObsolete (std::set <std::string, casecompare_lt_op> &categories);
