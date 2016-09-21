@@ -110,6 +110,9 @@ Window::Create (Window * parent, DWORD Style)
   // Save our parent, we'll probably need it eventually.
   Parent = parent;
 
+  //
+  OldWndProc = DefWindowProc;
+
   // Create the window instance
   WindowHandle = CreateWindowEx (
                    // Extended Style
@@ -136,6 +139,23 @@ Window::Create (Window * parent, DWORD Style)
       // Failed
       return false;
     }
+
+  return true;
+}
+
+bool
+Window::CreateFromHwnd (Window * parent, HWND hWnd)
+{
+  // Create a Window object for an existing window (e.g. one created from a
+  // dialog resource)
+  WindowHandle = hWnd;
+  Parent = parent;
+
+  // Set a backreference to this class instance in the HWND.
+  SetWindowLongPtr (hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+
+  // Subclass the WndProc and save current WndProc
+  OldWndProc = (WNDPROC) SetWindowLongPtr (hWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(& Window::WindowProcReflector));
 
   return true;
 }
@@ -269,7 +289,7 @@ Window::CenterWindow ()
 LRESULT
 Window::WindowProc (UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-  return DefWindowProc (WindowHandle, uMsg, wParam, lParam);
+  return CallWindowProc(OldWndProc, WindowHandle, uMsg, wParam, lParam);
 }
 
 bool

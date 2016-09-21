@@ -37,20 +37,39 @@ static ListView::Header pkg_headers[] = {
 };
 
 void
-ListView::init(HWND parent)
+ListView::init(Window *parent)
 {
-  hWndParent = parent;
+  hWndParent = parent->GetHWND();
 
   // locate the listview control
-  hWndListView = ::GetDlgItem(parent, IDC_CHOOSE_LIST);
+  hWndListView = parent->GetDlgItem(IDC_CHOOSE_LIST);
+  CreateFromHwnd(parent, hWndListView);
 
+  // configure the listview control
   SendMessage(hWndListView, CCM_SETVERSION, 6, 0);
 
   (void)ListView_SetExtendedListViewStyle(hWndListView,
                                           LVS_EX_COLUMNSNAPPOINTS | // use cxMin
                                           LVS_EX_FULLROWSELECT |
                                           LVS_EX_GRIDLINES |
-                                          LVS_EX_HEADERDRAGDROP); // headers can be re-ordered
+                                          LVS_EX_HEADERDRAGDROP);   // headers can be re-ordered
+
+  // LVS_EX_INFOTIP);          // enable tooltips
+  // LVS_EX_LABELTIP);         // ensure tooltip is not partially hidden
+
+  // tooltips
+  ActivateTooltips();
+
+  TOOLINFO ti;
+  memset ((void *)&ti, 0, sizeof(ti));
+  ti.cbSize = sizeof(ti);
+  ti.uFlags = TTF_IDISHWND;
+  ti.hwnd = hWndListView;
+  ti.uId = (UINT_PTR)hWndListView;
+  // setting hwnd and ui to same window isn't explicitly documented, but seems to work
+  ti.lpszText = (LPTSTR)"some tooltip"; //LPSTR_TEXTCALLBACK; // use TTN_GETDISPINFO
+  //::GetClientRect (hWndListView, &ti.rect); // XXX: needs to be updated when window changes size...
+  SendMessage (TooltipHandle, TTM_ADDTOOL, 0, (LPARAM)&ti);
 
   // give the header control a border
   HWND hWndHeader = ListView_GetHeader(hWndListView);
@@ -139,7 +158,7 @@ ListView::resizeColumns(void)
     total = total + headers[i].width;
 
   RECT r;
-  GetClientRect(hWndListView, &r);
+  ::GetClientRect(hWndListView, &r);
   int width = r.right - r.left;
 
   if (total < width)
@@ -193,6 +212,10 @@ ListView::set_contents(ListViewContents *_contents)
 bool
 ListView::OnMessageCmd (int id, HWND hwndctl, UINT code)
 {
+#if DEBUG
+  Log (LOG_BABBLE) << "ListView::OnMesageCmd " << id << " " << hwndctl << " " << code << endLog;
+#endif
+
   // We don't care.
   return false;
 }
@@ -200,7 +223,13 @@ ListView::OnMessageCmd (int id, HWND hwndctl, UINT code)
 bool
 ListView::OnNotify (NMHDR *pNmHdr)
 {
-  if (pNmHdr->code == LVN_GETDISPINFO)
+#if DEBUG
+  Log (LOG_BABBLE) << "ListView::OnNotify " << pNmHdr->idFrom << " " << pNmHdr->hwndFrom << " " << pNmHdr->code << endLog;
+#endif
+
+  switch (pNmHdr->code)
+  {
+  case LVN_GETDISPINFO:
     {
       NMLVDISPINFO *pNmLvDispInfo = (NMLVDISPINFO *)pNmHdr;
       // Log (LOG_BABBLE) << "LVN_GETDISPINFO " << pNmLvDispInfo->item.iItem << endLog;
@@ -208,7 +237,51 @@ ListView::OnNotify (NMHDR *pNmHdr)
         pNmLvDispInfo->item.pszText = (char *) (*contents)[pNmLvDispInfo->item.iItem]->text(pNmLvDispInfo->item.iSubItem);
       return true;
     }
-  else if (pNmHdr->code == LVN_GETEMPTYMARKUP)
+    break;
+
+  // case LVN_GETINFOTIP:
+  //   {
+  //     NMLVGETINFOTIP *pNmLvGetInfoTip = (NMLVGETINFOTIP *)pNmHdr;
+  //     Log (LOG_BABBLE) << "LVN_GETINFOTIP " << pNmLvGetInfoTip->iItem << " " << pNmLvGetInfoTip->iSubItem << endLog;
+
+  //     if (contents)
+  //       pNmLvGetInfoTip->pszText = (char *) (*contents)[pNmLvGetInfoTip->iItem]->tooltip(pNmLvGetInfoTip->iSubItem);
+
+  //     return true;
+  //   }
+  //   break;
+
+  case TTN_GETDISPINFO:
+    {
+      // LVN_GETINFOTIP doesn't work for subitems, so we have to do our own
+      // tooltip handling
+
+      // convert mouse position to item/subitem
+      LVHITTESTINFO lvHitTestInfo;
+      lvHitTestInfo.flags = LVHT_ONITEM;
+      GetCursorPos(&lvHitTestInfo.pt);
+      ::ScreenToClient(hWndListView, &lvHitTestInfo.pt);
+      if (ListView_HitTest(hWndListView,&lvHitTestInfo) == -1)
+        printf("ListView_HitTest failed");
+
+      Log (LOG_BABBLE) << "TTN_GETDISPINFO " << lvHitTestInfo.iItem << " " << lvHitTestInfo.iSubItem << endLog;
+
+      // get the tooltip text for that item/subitem
+      const char *pszText = "";
+      if (contents)
+        pszText = (*contents)[lvHitTestInfo.iItem]->tooltip(lvHitTestInfo.iSubItem);
+
+      // Set the tooltip text
+      NMTTDISPINFO *pNmTTDispInfo = (NMTTDISPINFO *) pNmHdr;
+      pNmTTDispInfo->lpszText = (char *)pszText;
+      pNmTTDispInfo->hinst = NULL;
+      pNmTTDispInfo->uFlags = 0;
+
+      return true;
+    }
+    break;
+
+  case LVN_GETEMPTYMARKUP:
     {
       NMLVEMPTYMARKUP *pNmMarkup = (NMLVEMPTYMARKUP*) pNmHdr;
 
@@ -221,7 +294,9 @@ ListView::OnNotify (NMHDR *pNmHdr)
 
       return true;
     }
-  else if (pNmHdr->code == NM_CLICK)
+    break;
+
+  case NM_CLICK:
     {
       NMITEMACTIVATE *pNmItemAct = (NMITEMACTIVATE *) pNmHdr;
       Log (LOG_BABBLE) << "NM_CLICK: pnmitem->iItem " << pNmItemAct->iItem << " pNmItemAct->iSubItem " << pNmItemAct->iSubItem << endLog;
@@ -238,7 +313,10 @@ ListView::OnNotify (NMHDR *pNmHdr)
                 Log (LOG_BABBLE) << "ListView_RedrawItems failed " << endLog;
             }
         }
+      return true;
     }
+    break;
+  }
 
   // We don't care.
   return false;
@@ -255,4 +333,60 @@ void
 ListView::setemptytext(const char *text)
 {
   empty_list_text = text;
+}
+
+LRESULT
+ListView::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+  switch (uMsg)
+    {
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+    case WM_MOUSEMOVE:
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+      {
+        MSG msg;
+        msg.hwnd = hWndListView;
+        msg.message = uMsg;
+        msg.wParam = wParam;
+        msg.lParam = lParam;
+        msg.time = GetMessageTime();
+        DWORD pos = GetMessagePos();
+        msg.pt.x = LOWORD(pos);
+        msg.pt.y = HIWORD(pos);
+
+        //HWND ttHwnd = ListView_GetToolTips(hWndListView);
+        HWND ttHwnd = TooltipHandle;
+        SendMessage(ttHwnd, TTM_RELAYEVENT, GetMessageExtraInfo(), (LPARAM) &msg);
+      }
+    }
+
+  // XXX: these should live in base class
+  switch (uMsg)
+    {
+    case WM_NOTIFY:
+      {
+        if (OnNotify ((NMHDR *) lParam))
+          return true;
+      }
+      break;
+    case WM_COMMAND:
+      {
+        if (OnMessageCmd (LOWORD (wParam), (HWND) lParam, HIWORD (wParam)))
+          return true;
+      }
+      break;
+    }
+
+  if ((uMsg >= WM_APP) && (uMsg < 0xC000))
+    {
+      if (OnMessageApp (uMsg, wParam, lParam))
+        return true;
+    }
+
+  // if unhandled, call base class method
+  return Window::WindowProc(uMsg, wParam, lParam);
 }

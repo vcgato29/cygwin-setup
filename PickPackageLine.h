@@ -27,6 +27,7 @@ public:
   {
   };
   const char *text(int col);
+  const char *tooltip(int col);
   bool click(int col);
 private:
   packagemeta & pkg;

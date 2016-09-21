@@ -44,6 +44,7 @@ private:
 
   // Our Windows(tm) window handle.
   HWND WindowHandle;
+  WNDPROC OldWndProc;
 
   Window *Parent;
 
@@ -51,8 +52,10 @@ private:
   // that are to be deleted in our dtor
   std::vector<HFONT> Fonts;
 
+ public:
   // if we have activated tool tips this will contain the handle
   HWND TooltipHandle;
+ private:
   
   // maps a control ID to a string resource ID
   std::map<int, int> TooltipStrings;
@@ -85,7 +88,9 @@ public:
   virtual bool Create (Window * Parent = NULL,
 		       DWORD Style =
 		       WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN);
-  
+
+  bool CreateFromHwnd (Window * parent, HWND hWnd);
+
   static void SetAppInstance (HINSTANCE h)
   {
     // This only has to be called once in the entire app, before

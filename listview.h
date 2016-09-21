@@ -16,6 +16,7 @@
 
 #include "win32.h"
 #include <vector>
+#include <window.h>
 
 // ---------------------------------------------------------------------------
 // interface to class ListView
@@ -27,18 +28,19 @@ class ListViewLine
 {
  public:
   virtual const char *text(int col) = 0;
+  virtual const char *tooltip(int col) = 0;
   virtual bool click(int col) = 0;
 };
 
 typedef std::vector<ListViewLine *> ListViewContents;
 
-class ListView
+class ListView : Window
 {
  public:
   class Header;
   typedef Header *HeaderList;
 
-  void init(HWND parent);
+  void init(Window *parent);
 
   void empty(void);
   void initColumns(HeaderList hl);
@@ -60,6 +62,8 @@ class ListView
     int fmt;
     int hdr_width;
   };
+
+  LRESULT WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
  private:
   HWND hWndParent;

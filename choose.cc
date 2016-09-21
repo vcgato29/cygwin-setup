@@ -141,7 +141,7 @@ ChooserPage::createListview ()
   SetBusy ();
 
   listview = new ListView();
-  listview->init(GetHWND ());
+  listview->init(this);
 
   packagedb db;
   packagedb::categoriesType::iterator it = db.categories.find("All");
@@ -386,7 +386,7 @@ bool
 ChooserPage::OnMessageCmd (int id, HWND hwndctl, UINT code)
 {
 #if DEBUG
-  Log (LOG_BABBLE) << "OnMesageCmd " << id << " " << hwndctl << " " << code << endLog;
+  Log (LOG_BABBLE) << "ChooserPage::MessageCmd " << id << " " << hwndctl << " " << code << endLog;
 #endif
 
   // route messages for the listview to it
@@ -460,7 +460,7 @@ bool
 ChooserPage::OnNotify (NMHDR *pNmHdr)
 {
 #if DEBUG
-  Log (LOG_BABBLE) << "OnNotify " << pNmHdr->idFrom << " " << pNmHdr->hwndFrom << " " << pNmHdr->code << endLog;
+  Log (LOG_BABBLE) << "ChooserPage::OnNotify " << pNmHdr->idFrom << " " << pNmHdr->hwndFrom << " " << pNmHdr->code << endLog;
 #endif
 
   // route messages for the listview to it
