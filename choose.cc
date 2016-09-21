@@ -460,7 +460,7 @@ LRESULT
 ChooserPage::OnNotify (NMHDR *pNmHdr)
 {
 #if DEBUG
-  Log (LOG_BABBLE) << "ChooserPage::OnNotify " << pNmHdr->idFrom << " " << pNmHdr->hwndFrom << " " << pNmHdr->code << endLog;
+  Log (LOG_BABBLE) << "ChooserPage::OnNotify id:" << pNmHdr->idFrom << " hwnd:" << pNmHdr->hwndFrom << " code:" << pNmHdr->code << endLog;
 #endif
 
   // route messages for the listview to it

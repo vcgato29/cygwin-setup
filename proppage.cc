@@ -141,6 +141,15 @@ PropertyPage::DialogProc (UINT message, WPARAM wParam, LPARAM lParam)
       case WM_NOTIFY:
         {
         NMHDR *pNmHdr = (NMHDR *) lParam;
+
+        // offer to subclass first
+        INT_PTR result = OnNotify (pNmHdr);
+        if (result)
+          {
+            SetWindowLongPtr (GetHWND (), DWLP_MSGRESULT, result);
+            return TRUE;
+          }
+
         switch (pNmHdr->code)
         {
           case PSN_APPLY:
@@ -255,10 +264,6 @@ PropertyPage::DialogProc (UINT message, WPARAM wParam, LPARAM lParam)
           case TTN_GETDISPINFO:
             {
               return TooltipNotificationHandler (lParam);
-            }
-          default:
-            {
-              return OnNotify (pNmHdr);
             }
         }
         }

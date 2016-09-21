@@ -57,7 +57,16 @@ ListView::init(HWND parent)
   // LVS_EX_LABELTIP);         // ensure tooltip is not partially hidden
 
   // tooltips
-  ActivateTooltips();
+  //  ActivateTooltips();
+  HWND TooltipHandle = CreateWindowEx (WS_EX_TOPMOST,
+                                       (LPCTSTR) TOOLTIPS_CLASS,
+                                       NULL,
+                                       WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, CW_USEDEFAULT,
+                                       CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+                                       hWndListView,
+                                       (HMENU) 0,
+                                       GetModuleHandle(NULL),
+                                       NULL);
 
   TOOLINFO ti;
   memset ((void *)&ti, 0, sizeof(ti));
@@ -223,7 +232,7 @@ LRESULT
 ListView::OnNotify (NMHDR *pNmHdr)
 {
 #if DEBUG
-  Log (LOG_BABBLE) << "ListView::OnNotify " << pNmHdr->idFrom << " " << pNmHdr->hwndFrom << " " << pNmHdr->code << endLog;
+  Log (LOG_BABBLE) << "ListView::OnNotify id:" << pNmHdr->idFrom << " hwnd:" << pNmHdr->hwndFrom << " code:" << pNmHdr->code << endLog;
 #endif
 
   switch (pNmHdr->code)
