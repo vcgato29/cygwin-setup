@@ -58,7 +58,7 @@ public:
   HBITMAP bm_icon;
   HRGN rect_icon;
   HBRUSH bg_fg_brush;
-  HANDLE bm_spin, bm_checkyes, bm_checkno, bm_checkna, bm_treeplus, bm_treeminus;
+  HANDLE bm_spin, bm_treeplus, bm_treeminus;
   trusts deftrust;
   int scroll_ulc_x, scroll_ulc_y;
   int header_height;

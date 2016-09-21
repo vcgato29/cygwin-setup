@@ -53,12 +53,20 @@ class ListView
   bool OnMessageCmd (int id, HWND hwndctl, UINT code);
   LRESULT OnNotify (NMHDR *pNmHdr);
 
+  enum class ControlType
+  {
+    text,
+    checkbox,
+    dropdown,
+  };
+
   class Header
   {
   public:
     const char *text;
-    int width;
     int fmt;
+    ControlType type;
+    int width;
     int hdr_width;
   };
 

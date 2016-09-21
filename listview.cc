@@ -25,15 +25,15 @@
 // ---------------------------------------------------------------------------
 
 static ListView::Header pkg_headers[] = {
-  {"Package",     LVCFMT_LEFT,  0},
-  {"Current",     LVCFMT_LEFT,  0},
-  {"New",         LVCFMT_LEFT,  0},
-  {"Bin?",        LVCFMT_LEFT,  0},
-  {"Src?",        LVCFMT_LEFT,  0},
-  {"Categories",  LVCFMT_LEFT,  0},
-  {"Size",        LVCFMT_RIGHT, 0},
-  {"Description", LVCFMT_LEFT,  0},
-  {0, 0, 0}
+  {"Package",     LVCFMT_LEFT,  ListView::ControlType::text},
+  {"Current",     LVCFMT_LEFT,  ListView::ControlType::text},
+  {"New",         LVCFMT_LEFT,  ListView::ControlType::text},
+  {"Bin?",        LVCFMT_LEFT,  ListView::ControlType::checkbox},
+  {"Src?",        LVCFMT_LEFT,  ListView::ControlType::checkbox},
+  {"Categories",  LVCFMT_LEFT,  ListView::ControlType::text},
+  {"Size",        LVCFMT_RIGHT, ListView::ControlType::text},
+  {"Description", LVCFMT_LEFT,  ListView::ControlType::text},
+  {0}
 };
 
 void
@@ -297,9 +297,6 @@ ListView::OnNotify (NMHDR *pNmHdr)
                           empty_list_text, -1,
                           pNmMarkup->szMarkup, L_MAX_URL_LENGTH);
 
-      pNmMarkup->dwFlags = EMF_CENTERED;
-      wcscpy(pNmMarkup->szMarkup, L"Link one and two.");
-
       return true;
     }
     break;
@@ -334,34 +331,49 @@ ListView::OnNotify (NMHDR *pNmHdr)
         case CDDS_PREPAINT:
           return CDRF_NOTIFYITEMDRAW;
         case CDDS_ITEMPREPAINT:
-          {
-            COLORREF crText, crBkgnd;
-            int iRow = pNmLvCustomDraw->nmcd.dwItemSpec;
-            Log (LOG_BABBLE) << "NM_CUSTOMDRAW: stage " << pNmLvCustomDraw->nmcd.dwDrawStage << " row:" << iRow << endLog;
-
-            if ((iRow % 2) == 0)
-              {
-                crText = RGB(255,0,0);
-                crBkgnd = RGB(128,128,255);
-              }
-            else
-              {
-                crText = RGB(0,255,0);
-                crBkgnd = RGB(255,0,0);
-            }
-
-            pNmLvCustomDraw->clrText = crText;
-            pNmLvCustomDraw->clrTextBk = crBkgnd;
-
-            return CDRF_NEWFONT;
-          }
-          //          return CDRF_NOTIFYSUBITEMDRAW;
+          return CDRF_NOTIFYSUBITEMDRAW;
         case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
           {
-            // int iCol = pNmLvCustomDraw->iSubItem;
+            LRESULT result = CDRF_DODEFAULT;
+            int iCol = pNmLvCustomDraw->iSubItem;
             int iRow = pNmLvCustomDraw->nmcd.dwItemSpec;
-            pNmLvCustomDraw->clrTextBk = RGB(10+iRow*10, 10+iRow*10, 10+iRow*10);
-            return CDRF_NEWFONT;
+
+            switch (headers[iCol].type)
+              {
+              default:
+              case ListView::ControlType::text:
+                result = CDRF_DODEFAULT;
+                break;
+
+              case ListView::ControlType::checkbox:
+                {
+                  // get the subitem text
+                  char buf[3];
+                  ListView_GetItemText(hWndListView, iRow, iCol, buf, _countof(buf));
+
+                  // map the subitem text to a checkbox state
+                  UINT state = DFCS_BUTTONCHECK | DFCS_FLAT;
+                  if (buf[0] == 'y')                            // yes
+                    state |= DFCS_CHECKED;
+                  else if ((buf[0] == 'n') && (buf[1] == 'o'))  // no
+                    state |= 0;
+                  else                                          // n/a
+                    state |= DFCS_INACTIVE;
+
+                  // draw a checkbox
+                  RECT r;
+                  (void)ListView_GetSubItemRect(hWndListView, iRow, iCol, LVIR_BOUNDS, &r);
+                  DrawFrameControl(pNmLvCustomDraw->nmcd.hdc, &r, DFC_BUTTON, state);
+
+                  result = CDRF_SKIPDEFAULT;
+                }
+                break;
+
+              case ListView::ControlType::dropdown:
+                result = CDRF_DODEFAULT;
+                break;
+              }
+            return result;
           }
         }
     }
