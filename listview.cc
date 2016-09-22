@@ -55,23 +55,28 @@ ListView::init(HWND parent)
 
   // LVS_EX_INFOTIP/LVN_GETINFOTIP doesn't work for doesn't work for subitems,
   // so we have to do our own tooltip handling
-  HWND TooltipHandle = CreateWindowEx (WS_EX_TOPMOST,
-                                       (LPCTSTR) TOOLTIPS_CLASS,
-                                       NULL,
-                                       WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, CW_USEDEFAULT,
-                                       CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-                                       hWndListView,
-                                       (HMENU) 0,
-                                       GetModuleHandle(NULL),
-                                       NULL);
+  HWND TooltipHandle = CreateWindowEx (0,
+                                  (LPCTSTR) TOOLTIPS_CLASS,
+                                  NULL,
+                                  WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+                                  CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+                                  hWndParent,
+                                  (HMENU) 0,
+                                  GetModuleHandle(NULL),
+                                  NULL);
+
+  // must be topmost so that tooltips will display on top
+  SetWindowPos (TooltipHandle, HWND_TOPMOST, 0, 0, 0, 0,
+              SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
   TOOLINFO ti;
   memset ((void *)&ti, 0, sizeof(ti));
   ti.cbSize = sizeof(ti);
-  ti.uFlags = TTF_SUBCLASS;
+  ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
   ti.lpszText = (LPTSTR)LPSTR_TEXTCALLBACK; // use TTN_GETDISPINFO
   ti.hwnd = hWndParent;                     // sent to this window
-  ti.uId = IDC_CHOOSE_LIST;
+  ti.uId = (UINT_PTR)hWndListView;
+
   SendMessage (TooltipHandle, TTM_ADDTOOL, 0, (LPARAM)&ti);
 
   // give the header control a border
