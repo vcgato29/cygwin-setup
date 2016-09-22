@@ -18,7 +18,7 @@
 
 #include <string>
 #include "win32.h"
-#include "window.h"
+//#include "window.h"
 //#include "RECTWrapper.h"
 
 /* #define HMARGIN         10 */
@@ -34,7 +34,10 @@
 #include "package_meta.h"
 #include "listview.h"
 
-class PickView : public Window
+class Window;
+class CategoryTree;
+
+class PickView
 {
 public:
   enum class views;
@@ -45,12 +48,12 @@ public:
   views getViewMode ();
   //  Header *headers;
   PickView ();
-  void init(views _mode, ListView *_listview);
+  void init(views _mode, ListView *_listview, Window *parent);
   ~PickView();
   static const char *mode_caption (views mode);
   void setObsolete (bool doit);
   void insert_pkg (packagemeta &);
-  void insert_category (Category *, bool);
+  void insert_category (CategoryTree *);
   void refresh();
   //  int row_height;
   //  TEXTMETRIC tm;
@@ -88,12 +91,16 @@ public:
   /*   bool needs_clip; */
   /* }; */
 
+  Window *GetParent(void) { return parent; }
+
 private:
   views view_mode;
   ListView *listview;
   bool showObsolete;
   std::string packageFilterString;
   ListViewContents *contents;
+  CategoryTree *cat_tree_root;
+  Window *parent;
 
   // Stuff needed to handle resizing
   //  bool hasWindowRect;

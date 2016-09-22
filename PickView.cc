@@ -100,6 +100,42 @@ PickView::set_header_column_order (views vm)
 }
 #endif
 
+//
+// Helper class which stores the collapsed/expanded state for each category (and
+// the pseudo-category 'All') and helps build the listview rowset for Category
+// mode using that.
+//
+class CategoryTree
+{
+public:
+  CategoryTree(Category & _cat, bool _collapsed) :
+    cat (_cat), collapsed(_collapsed)
+  {
+  }
+
+  ~CategoryTree()
+  {
+    empty();
+  }
+
+  void insert(CategoryTree *child)
+  {
+    bucket.push_back(child);
+  }
+
+  void empty(void)
+  {
+    bucket.clear();
+  }
+
+private:
+  Category &cat;
+  bool collapsed;
+  std::vector <CategoryTree *> bucket;
+
+  friend PickView;
+};
+
 void
 PickView::set_headers ()
 {
@@ -128,11 +164,7 @@ PickView::setViewMode (views mode)
   if (view_mode == PickView::views::Category)
     {
       // contents.ShowLabel (true);
-      /* start collapsed. TODO: make this a chooser flag */
-      for (packagedb::categoriesType::iterator n =
-            packagedb::categories.begin(); n != packagedb::categories.end();
-            ++n)
-        insert_category (&*n, true);
+        insert_category (cat_tree_root);
     }
   else
     {
@@ -152,7 +184,7 @@ PickView::setViewMode (views mode)
                     (pkg.desired &&
                       (pkg.desired.picked () ||               // install bin
                        pkg.desired.sourcePackage ().picked ())))) // src
-              
+
               // "Up to date" : installed packages that will not be changed
               || (view_mode == PickView::views::PackageKeeps &&
                   (pkg.installed && pkg.desired && !pkg.desired.picked ()
@@ -168,7 +200,7 @@ PickView::setViewMode (views mode)
             {
               // Filter by package name
               if (packageFilterString.empty ()
-		  || StrStrI (pkg.name.c_str (), packageFilterString.c_str ()))
+                  || StrStrI (pkg.name.c_str (), packageFilterString.c_str ()))
                 insert_pkg (pkg);
             }
         }
@@ -245,34 +277,21 @@ PickView::insert_pkg (packagemeta & pkg)
 }
 
 void
-PickView::insert_category (Category *cat, bool collapsed)
+PickView::insert_category (CategoryTree *cat_tree)
 {
-  // Urk, special case
-  if (casecompare(cat->first, "All") == 0 ||
-      (!showObsolete && isObsolete (cat->first)))
+  Category *cat = &(cat_tree->cat);
+
+  // Suppress obsolete category when not showing obsolete
+  if ((!showObsolete && isObsolete (cat->first)))
     return;
 
-  // count the number of packages in this category
-  int packageCount = 0;
-  for (std::vector <packagemeta *>::iterator i = cat->second.begin ();
-       i != cat->second.end () ; ++i)
+  // if it's not the "All" category
+  bool hasContents = false;
+  bool isAll = casecompare(cat->first, "All") == 0;
+  if (!isAll)
     {
-      if (packageFilterString.empty () \
-          || (*i
-              && StrStrI ((*i)->name.c_str (), packageFilterString.c_str ())))
-        {
-          packageCount++;
-        }
-    }
-
-  // if there are some packages in the category, or we are showing everything,
-  // insert the category
-  if (packageFilterString.empty () || packageCount)
-    {
-      PickCategoryLine *catline = new PickCategoryLine(*this, *cat, collapsed);
-      contents->push_back(catline);
-
-      // then insert lines for the packages in this category
+      // count the number of packages in this category
+      int packageCount = 0;
       for (std::vector <packagemeta *>::iterator i = cat->second.begin ();
            i != cat->second.end () ; ++i)
         {
@@ -280,8 +299,48 @@ PickView::insert_category (Category *cat, bool collapsed)
               || (*i
                   && StrStrI ((*i)->name.c_str (), packageFilterString.c_str ())))
             {
-              insert_pkg(**i);
+              packageCount++;
             }
+        }
+
+      // if there are some packages in the category, or we are showing everything,
+      if (packageFilterString.empty () || packageCount)
+        {
+          hasContents = true;
+        }
+    }
+
+  // insert line for the category
+  if (isAll || hasContents)
+    {
+      PickCategoryLine *catline = new PickCategoryLine(*this, *cat, cat_tree->collapsed);
+      contents->push_back(catline);
+    }
+
+  // if not collapsed
+  if (!cat_tree->collapsed)
+    {
+      // insert lines for the packages in this category
+      if (!isAll)
+        {
+          for (std::vector <packagemeta *>::iterator i = cat->second.begin ();
+               i != cat->second.end () ; ++i)
+            {
+              if (packageFilterString.empty ()  \
+                  || (*i
+                      && StrStrI ((*i)->name.c_str (), packageFilterString.c_str ())))
+                {
+                  insert_pkg(**i);
+                }
+            }
+        }
+
+      // recurse for contained categories
+      for (std::vector <CategoryTree *>::iterator i = cat_tree->bucket.begin ();
+           i != cat_tree->bucket.end();
+           i++)
+        {
+          insert_category(*i);
         }
     }
 }
@@ -373,10 +432,39 @@ PickView::PickView() :
 }
 
 void
-PickView::init(views _mode, ListView *_listview)
+PickView::init(views _mode, ListView *_listview, Window *_parent)
 {
   view_mode = _mode;
   listview = _listview;
+  parent = _parent;
+
+  /* Build the category tree */
+
+  /* Start collapsed. TODO: make that a flag */
+  bool collapsed = true;
+
+  /* Find the 'All' category */
+  cat_tree_root = NULL;
+  for (packagedb::categoriesType::iterator n =
+         packagedb::categories.begin(); n != packagedb::categories.end();
+       ++n)
+    {
+      if (casecompare(n->first, "All") == 0)
+        {
+          cat_tree_root = new CategoryTree(*n, collapsed);
+          break;
+        }
+    }
+
+  /* Add all the other categories as children */
+  for (packagedb::categoriesType::iterator n =
+         packagedb::categories.begin(); n != packagedb::categories.end();
+       ++n)
+    {
+      CategoryTree *cat_tree = new CategoryTree(*n, collapsed);
+      cat_tree_root->insert(cat_tree);
+    }
+
   refresh ();
 }
 
@@ -392,9 +480,7 @@ PickView::defaultTrust (trusts trust)
   packagedb db;
   db.defaultTrust(trust);
 
-  // force the picker to redraw
-  RECT r = GetClientRect ();
-  InvalidateRect (this->GetHWND(), &r, TRUE);
+  listview->redraw();
 }
 
 /* This recalculates all column widths and resets the view */

@@ -45,6 +45,7 @@ class ListView
   void initColumns(HeaderList hl);
   void noteColumnWidth(int col_num, const std::string& string);
   void resizeColumns(void);
+  void redraw(void);
 
   void set_contents(ListViewContents *contents);
 

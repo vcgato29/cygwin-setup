@@ -23,7 +23,7 @@
 class PickCategoryLine: public ListViewLine
 {
 public:
-  PickCategoryLine (PickView & aView, Category & _cat, bool _collapsed = true) :
+  PickCategoryLine (PickView & aView, Category & _cat, bool &_collapsed) :
   theView (aView), cat (_cat), collapsed(_collapsed)
   {
   };
@@ -38,9 +38,9 @@ public:
 private:
   void set_action (packagemeta::_actions);
 
-  PickView& theView;
+  PickView & theView;
   Category & cat;
-  bool collapsed;
+  bool & collapsed;
 
   packagemeta::_actions current_default;
 };

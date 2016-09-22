@@ -16,6 +16,7 @@
 #include "PickCategoryLine.h"
 #include "package_db.h"
 #include "PickView.h"
+#include "window.h"
 
 const char *
 PickCategoryLine::text (int col_num)
@@ -38,6 +39,7 @@ PickCategoryLine::click(int col_num)
   if (col_num == 0)
     {
       collapsed = !collapsed;
+      theView.refresh();
     }
   else if (col_num == 2)
     {

@@ -353,7 +353,12 @@ ListView::OnNotify (NMHDR *pNmHdr)
 
                   // map the subitem text to a checkbox state
                   UINT state = DFCS_BUTTONCHECK | DFCS_FLAT;
-                  if (buf[0] == 'y')                            // yes
+                  if (buf[0] == '\0')                           // empty
+                    {
+                      result = CDRF_DODEFAULT;
+                      break;
+                    }
+                  else if (buf[0] == 'y')                       // yes
                     state |= DFCS_CHECKED;
                   else if ((buf[0] == 'n') && (buf[1] == 'o'))  // no
                     state |= 0;
@@ -394,4 +399,12 @@ void
 ListView::setemptytext(const char *text)
 {
   empty_list_text = text;
+}
+
+void
+ListView::redraw(void)
+{
+  RECT r;
+  ::GetClientRect (hWndListView, &r);
+  InvalidateRect (hWndListView, &r, TRUE);
 }

@@ -153,7 +153,7 @@ ChooserPage::createListview ()
     listview->setemptytext("Nothing to install or update.");
 
   chooser = new PickView();
-  chooser->init(PickView::views::Category, listview);
+  chooser->init(PickView::views::Category, listview, this);
 
   SendMessage (GetDlgItem (IDC_CHOOSE_VIEW), CB_SETCURSEL, (WPARAM)chooser->getViewMode(), 0);
 
