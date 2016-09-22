@@ -53,11 +53,8 @@ ListView::init(HWND parent)
                                           LVS_EX_GRIDLINES |
                                           LVS_EX_HEADERDRAGDROP);   // headers can be re-ordered
 
-  // LVS_EX_INFOTIP);          // enable tooltips
-  // LVS_EX_LABELTIP);         // ensure tooltip is not partially hidden
-
-  // tooltips
-  //  ActivateTooltips();
+  // LVS_EX_INFOTIP/LVN_GETINFOTIP doesn't work for doesn't work for subitems,
+  // so we have to do our own tooltip handling
   HWND TooltipHandle = CreateWindowEx (WS_EX_TOPMOST,
                                        (LPCTSTR) TOOLTIPS_CLASS,
                                        NULL,
@@ -71,12 +68,10 @@ ListView::init(HWND parent)
   TOOLINFO ti;
   memset ((void *)&ti, 0, sizeof(ti));
   ti.cbSize = sizeof(ti);
-  ti.uFlags = TTF_IDISHWND;
-  ti.hwnd = hWndListView;
-  ti.uId = (UINT_PTR)hWndListView;
-  // setting hwnd and ui to same window isn't explicitly documented, but seems to work
-  ti.lpszText = (LPTSTR)"some tooltip"; //LPSTR_TEXTCALLBACK; // use TTN_GETDISPINFO
-  //::GetClientRect (hWndListView, &ti.rect); // XXX: needs to be updated when window changes size...
+  ti.uFlags = TTF_SUBCLASS;
+  ti.lpszText = (LPTSTR)LPSTR_TEXTCALLBACK; // use TTN_GETDISPINFO
+  ti.hwnd = hWndParent;                     // sent to this window
+  ti.uId = IDC_CHOOSE_LIST;
   SendMessage (TooltipHandle, TTM_ADDTOOL, 0, (LPARAM)&ti);
 
   // give the header control a border
@@ -247,23 +242,8 @@ ListView::OnNotify (NMHDR *pNmHdr)
     }
     break;
 
-  // case LVN_GETINFOTIP:
-  //   {
-  //     NMLVGETINFOTIP *pNmLvGetInfoTip = (NMLVGETINFOTIP *)pNmHdr;
-  //     Log (LOG_BABBLE) << "LVN_GETINFOTIP " << pNmLvGetInfoTip->iItem << " " << pNmLvGetInfoTip->iSubItem << endLog;
-
-  //     if (contents)
-  //       pNmLvGetInfoTip->pszText = (char *) (*contents)[pNmLvGetInfoTip->iItem]->tooltip(pNmLvGetInfoTip->iSubItem);
-
-  //     return true;
-  //   }
-  //   break;
-
   case TTN_GETDISPINFO:
     {
-      // LVN_GETINFOTIP doesn't work for subitems, so we have to do our own
-      // tooltip handling
-
       // convert mouse position to item/subitem
       LVHITTESTINFO lvHitTestInfo;
       lvHitTestInfo.flags = LVHT_ONITEM;
