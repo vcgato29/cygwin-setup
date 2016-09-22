@@ -15,6 +15,7 @@
 
 #include "PickView.h"
 #include "PickPackageLine.h"
+#include "PickCategoryLine.h"
 #include <algorithm>
 #include <limits.h>
 #include <shlwapi.h>
@@ -131,8 +132,7 @@ PickView::setViewMode (views mode)
       for (packagedb::categoriesType::iterator n =
             packagedb::categories.begin(); n != packagedb::categories.end();
             ++n)
-        insert_category (&*n, (*n).first.c_str()[0] == '.'
-				? CATEGORY_EXPANDED : CATEGORY_COLLAPSED);
+        insert_category (&*n, true);
     }
   else
     {
@@ -211,7 +211,7 @@ bool
 isObsolete (std::set <std::string, casecompare_lt_op> &categories)
 {
   std::set <std::string, casecompare_lt_op>::const_iterator i;
-  
+
   for (i = categories.begin (); i != categories.end (); ++i)
     if (isObsolete (*i))
       return true;
@@ -221,7 +221,7 @@ isObsolete (std::set <std::string, casecompare_lt_op> &categories)
 bool
 isObsolete (const std::string& catname)
 {
-  if (casecompare(catname, "ZZZRemovedPackages") == 0 
+  if (casecompare(catname, "ZZZRemovedPackages") == 0
         || casecompare(catname, "_", 1) == 0)
     return true;
   return false;
@@ -252,21 +252,37 @@ PickView::insert_category (Category *cat, bool collapsed)
       (!showObsolete && isObsolete (cat->first)))
     return;
 
+  // count the number of packages in this category
   int packageCount = 0;
   for (std::vector <packagemeta *>::iterator i = cat->second.begin ();
        i != cat->second.end () ; ++i)
     {
       if (packageFilterString.empty () \
           || (*i
-	      && StrStrI ((*i)->name.c_str (), packageFilterString.c_str ())))
-	{
-	  packageCount++;
-	}
+              && StrStrI ((*i)->name.c_str (), packageFilterString.c_str ())))
+        {
+          packageCount++;
+        }
     }
 
+  // if there are some packages in the category, or we are showing everything,
+  // insert the category
   if (packageFilterString.empty () || packageCount)
     {
-      // listview->insert (cat->first.c_str());
+      PickCategoryLine *catline = new PickCategoryLine(*this, *cat, collapsed);
+      contents->push_back(catline);
+
+      // then insert lines for the packages in this category
+      for (std::vector <packagemeta *>::iterator i = cat->second.begin ();
+           i != cat->second.end () ; ++i)
+        {
+          if (packageFilterString.empty ()      \
+              || (*i
+                  && StrStrI ((*i)->name.c_str (), packageFilterString.c_str ())))
+            {
+              insert_pkg(**i);
+            }
+        }
     }
 }
 
