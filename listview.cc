@@ -27,7 +27,7 @@
 static ListView::Header pkg_headers[] = {
   {"Package",     LVCFMT_LEFT,  ListView::ControlType::text},
   {"Current",     LVCFMT_LEFT,  ListView::ControlType::text},
-  {"New",         LVCFMT_LEFT,  ListView::ControlType::text},
+  {"New",         LVCFMT_LEFT,  ListView::ControlType::popup},
   {"Bin?",        LVCFMT_LEFT,  ListView::ControlType::checkbox},
   {"Src?",        LVCFMT_LEFT,  ListView::ControlType::checkbox},
   {"Categories",  LVCFMT_LEFT,  ListView::ControlType::text},
@@ -289,7 +289,38 @@ ListView::OnNotify (NMHDR *pNmHdr)
   case NM_CLICK:
     {
       NMITEMACTIVATE *pNmItemAct = (NMITEMACTIVATE *) pNmHdr;
+      int iCol = pNmItemAct->iItem;
+      int iRow = pNmItemAct->iSubItem;
       Log (LOG_BABBLE) << "NM_CLICK: pnmitem->iItem " << pNmItemAct->iItem << " pNmItemAct->iSubItem " << pNmItemAct->iSubItem << endLog;
+
+      if (headers[iCol].type == ListView::ControlType::popup)
+        {
+          // XXX: also needs to happen on Windows menu key
+
+          // position pop-menu over the subitem
+          RECT r;
+          (void)ListView_GetSubItemRect(hWndListView, iRow, iCol, LVIR_BOUNDS, &r);
+
+          //
+          HMENU hMenu = CreatePopupMenu();
+          MENUITEMINFO mii;
+          mii.cbSize = sizeof(mii);
+          mii.fMask = MIIM_TYPE | MIIM_STATE | MIIM_STRING;
+          mii.fType = MFT_STRING;
+          mii.fState = MFS_CHECKED;
+          mii.dwTypeData = (char *)"One";
+
+          InsertMenuItem(hMenu, 0, MF_BYPOSITION, &mii);
+          mii.dwTypeData = (char *)"Two";
+          InsertMenuItem(hMenu, 1, MF_BYPOSITION, &mii);
+
+          int id = TrackPopupMenu(hMenu,
+                                  TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD | TPM_LEFTBUTTON | TPM_NOANIMATION,
+                                  r.left, r.top, 0, hWndListView, NULL);
+          (void)id;
+
+          DestroyMenu(hMenu);
+        }
 
       if (pNmItemAct->iItem >= 0)
         {
@@ -327,6 +358,7 @@ ListView::OnNotify (NMHDR *pNmHdr)
               {
               default:
               case ListView::ControlType::text:
+              case ListView::ControlType::popup:
                 result = CDRF_DODEFAULT;
                 break;
 
@@ -357,10 +389,6 @@ ListView::OnNotify (NMHDR *pNmHdr)
 
                   result = CDRF_SKIPDEFAULT;
                 }
-                break;
-
-              case ListView::ControlType::dropdown:
-                result = CDRF_DODEFAULT;
                 break;
               }
             return result;

@@ -58,7 +58,7 @@ class ListView
   {
     text,
     checkbox,
-    dropdown,
+    popup,
   };
 
   class Header
