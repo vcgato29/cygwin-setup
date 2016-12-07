@@ -42,17 +42,11 @@ EXTRA_DIST = \
 	CONTRIBUTORS \
 	COPYING \
 	bootstrap.sh \
-	check-na.bmp \
-	check-no.bmp \
-	check-yes.bmp \
-	choose-spin.bmp \
 	cygwin.ico \
 	cygwin-setup.ico \
 	cygwin-terminal.ico \
 	setup.exe.manifest \
-	setup64.exe.manifest \
-	tree-minus.bmp \
-	tree-plus.bmp
+	setup64.exe.manifest
 
 # iniparse.hh is generated from iniparse.yy via bison -d, so it needs to be
 # included here for proper tracking (but not iniparse.cc, since automake
@@ -172,6 +166,8 @@ inilint_SOURCES = \
 	KeysSetting.h \
 	libsolv.cc \
 	libsolv.h \
+	ListView.cc \
+	ListView.h \
 	localdir.cc \
 	localdir.h \
 	LogFile.cc \
@@ -207,7 +203,6 @@ inilint_SOURCES = \
 	PackageTrust.h \
 	PickCategoryLine.cc \
 	PickCategoryLine.h \
-	PickLine.h \
 	PickPackageLine.cc \
 	PickPackageLine.h \
 	PickView.cc \
