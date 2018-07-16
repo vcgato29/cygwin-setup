@@ -336,11 +336,24 @@ ListView::OnNotify (NMHDR *pNmHdr, LRESULT *pResult)
 
       int update = 0;
 
-      if (headers[iCol].type == ListView::ControlType::popup)
+      if ((headers[iCol].type == ListView::ControlType::popup) ||
+          (headers[iCol].type == ListView::ControlType::dropdown))
         {
           POINT p;
-          // position pop-up menu at the location of the click
-          GetCursorPos(&p);
+          if (headers[iCol].type == ListView::ControlType::dropdown)
+            {
+              // position drop-down menu over the subitem
+              RECT r;
+              ListView_GetSubItemRect(hWndListView, iRow, iCol, LVIR_BOUNDS, &r);
+              p.x = r.left;
+              p.y = r.top;
+              ClientToScreen(hWndListView, &p);
+            }
+          else if (headers[iCol].type == ListView::ControlType::popup)
+            {
+              // position pop-up menu at the location of the click
+              GetCursorPos(&p);
+            }
 
           update = popup_menu(iRow, iCol, p);
         }
@@ -418,6 +431,7 @@ ListView::OnNotify (NMHDR *pNmHdr, LRESULT *pResult)
                 break;
 
               case ListView::ControlType::popup:
+              case ListView::ControlType::dropdown:
                 {
                   // let the control draw the text, but notify us afterwards
                   result = CDRF_NOTIFYPOSTPAINT;
@@ -441,6 +455,7 @@ ListView::OnNotify (NMHDR *pNmHdr, LRESULT *pResult)
                 break;
 
               case ListView::ControlType::popup:
+              case ListView::ControlType::dropdown:
                 {
                   // draw the control at the RHS of the cell
                   RECT r;

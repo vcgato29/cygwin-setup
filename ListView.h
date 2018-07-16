@@ -49,6 +49,7 @@ class ListView
     text,
     checkbox,
     popup,
+    dropdown,
   };
 
   class Header
