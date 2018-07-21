@@ -570,6 +570,20 @@ ChooserPage::OnNotify (NMHDR *pNmHdr, LRESULT *pResult)
   if (listview->OnNotify(pNmHdr, pResult))
     return true;
 
+  if (pNmHdr->idFrom == IDC_CHOOSE_LIST)
+    {
+      switch (pNmHdr->code)
+        {
+        case NM_SETFOCUS:
+          SendMessage(GetHWND (), DM_SETDEFID, (WPARAM) IDC_CHOOSE_LIST, 0);
+          return true;
+        case NM_KILLFOCUS:
+          // restore the normal default button
+          SendMessage(GetHWND (), DM_SETDEFID, (WPARAM) 0x3024 /* ID_WIZNEXT */, 0);
+          return true;
+        }
+    }
+
   // we don't care
   return false;
 }
